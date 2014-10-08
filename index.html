@@ -31,10 +31,17 @@
         <div id="vertex-data">
           <h3>Select a point on the surface<BR>(shift-click or touch)</h3>
           <div>Shape name: <span id="pick-name" class="pick-data"></span></div>
+          <div>Shape number: <span id="pick-shape-number" class="pick-data"></span></div>
           <div>X: <span id="pick-x" class="pick-data"></span></div>
           <div>Y: <span id="pick-y" class="pick-data"></span></div>
           <div>Z: <span id="pick-z" class="pick-data"></span></div>
           <div>Vertex number: <span id="pick-index" class="pick-data"></span></div>
+          <div style="margin-top:20px;">
+            <span id="focus-shape" class="button">Focus This Shape</span>
+          </div>
+          <div style="margin-top:10px;">
+            <span id="unfocus-shape" class="button">Unfocus This Shape</span>
+          </div>
         </div>
       </div>
       <!-- Loading image from: http://www.ajaxload.info/ -->
@@ -59,7 +66,7 @@
               </select><br>
               <div class="format-hint"></div>
               <div id="obj-file-submit-div" class="file-submit-div">
-                <span id="obj-file-submit" class="button file-submit">Load</span><br>
+                <span id="obj-file-submit" class="button file-submit">Load</span>
               </div>
             </div>
           </div>

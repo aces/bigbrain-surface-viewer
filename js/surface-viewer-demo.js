@@ -124,22 +124,13 @@ $(function() {
     // to the displayed models.
     viewer.addEventListener("clearscreen", function() {
       $("#shapes").html("");
-      $("#data-range-box").hide();
-      $("#color-map-box").hide();
-      $("#vertex-data-wrapper").hide();
-      $("#pick-value-wrapper").hide();
-      $("#pick-label-wrapper").hide();
+      $("#pick-name").html("");
+      $("#pick-shape-number").html("");
       $("#pick-x").html("");
       $("#pick-y").html("");
       $("#pick-z").html("");
       $("#pick-index").html("");
       $("#pick-value").html("");
-      $("#pick-label").html("");
-      $("#annotation-media").html("");
-      $("#annotation-display").hide();
-      $("#annotation-wrapper").hide();
-      $("#paint-controls").hide();
-      viewer.annotations.reset();
     });
 
     // When the intensity range changes, adjust the displayed spectrum.
@@ -444,18 +435,6 @@ $(function() {
       viewer.autorotate.z = $("#autorotateZ").is(":checked");
     });
 
-    // Color map URLs are read from the config file and added to the
-    // color map select box.
-    var color_map_select = $('<select id="color-map-select"></select>').change(function() {
-      viewer.loadColorMapFromURL($(this).val());
-    });
-
-    BrainBrowser.config.get("color_maps").forEach(function(map) {
-      color_map_select.append('<option value="' + map.url + '">' + map.name +'</option>');
-    });
-
-    $("#color-map-box").append(color_map_select);
-
     // Remove currently loaded models.
     $("#clearshapes").click(function() {
       viewer.clearScreen();
@@ -465,8 +444,34 @@ $(function() {
     });
 
     $("#brainbrowser").click(function(event) {
-      if (!event.shiftKey && !event.ctrlKey) return;
+      if (!event.shiftKey) return;
       pick(viewer.mouse.x, viewer.mouse.y, event.ctrlKey);
+    });
+
+    $("#focus-shape").click(function(event) {
+      var name = $("#pick-name").html();
+
+      if (name === "") return;
+
+      viewer.model.children.forEach(function(child) {
+        if (child.name !== name) {
+          viewer.setTransparency(0, {shape_name: child.name});
+          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+        }
+      });
+    });
+
+    $("#unfocus-shape").click(function(event) {
+      var name = $("#pick-name").html();
+
+      if (name === "") return;
+
+      viewer.model.children.forEach(function(child) {
+        if (child.name !== name) {
+          viewer.setTransparency(1, {shape_name: child.name});
+          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 1);
+        }
+      });
     });
 
     document.getElementById("brainbrowser").addEventListener("touchend", function(event) {
@@ -487,59 +492,6 @@ $(function() {
 
       pick(x, y, true);
     }, false);
-
-    $("#annotation-save").click(function() {
-      if (!picked_object) {
-        return;
-      }
-
-      var vertex_num = parseInt($("#pick-index").html(), 10);
-      var annotation_display = $("#annotation-display");
-      var media = $("#annotation-media");
-
-      var annotation, annotation_data;
-      var vertex;
-
-      if (BrainBrowser.utils.isNumeric(vertex_num)) {
-        annotation = viewer.annotations.get(vertex_num, {
-          model_name: picked_object.model_name
-        });
-
-        if (annotation) {
-          annotation_data = annotation.annotation_info.data;
-        } else {
-          annotation_data = {};
-          viewer.annotations.add(vertex_num, annotation_data, {
-            model_name: picked_object.model_name
-          });
-        }
-
-        vertex = viewer.getVertex(vertex_num);
-
-        annotation_data.image = $("#annotation-image").val();
-        annotation_data.url = $("#annotation-url").val();
-        annotation_data.text = $("#annotation-text").val();
-
-        media.html("");
-
-        if (annotation_data.image) {
-          var image = new Image();
-          image.width = 200;
-          image.src = annotation_data.image;
-          annotation_display.show();
-          media.append(image);
-        }
-        if (annotation_data.url) {
-          annotation_display.show();
-          media.append($('<div><a href="' + annotation_data.url + '" target="_blank">' + annotation_data.url + '</a></div>'));
-        }
-
-        if (annotation_data.text) {
-          annotation_display.show();
-          media.append($('<div>' + annotation_data.text + '</div>'));
-        }
-      }
-    });
 
     $("#pick-value").change(function() {
       var index = parseInt($("#pick-index").html(), 10);
@@ -563,250 +515,6 @@ $(function() {
       }
     });
 
-    // Load demo models.
-    $("#examples").click(function(e) {
-      current_request++;
-      
-      var name = $(e.target).attr('data-example-name');
-      var matrixRotX, matrixRotY, matrixRotZ;
-      
-      if (current_request_name === name) return;
-      current_request_name = name;
-      
-      //Create a closure to compare current request number to number
-      // at the time request was sent.
-      function defaultCancelOptions(request_number) {
-        return function() { return request_number !== current_request; };
-      }
-      
-      loading_div.show();
-      viewer.clearScreen();
-
-      var examples = {
-        atlas: function() {
-          viewer.annotations.setMarkerRadius(1.5);
-          $("#vertex-data-wrapper").show();
-          $("#pick-value-wrapper").show();
-          $("#pick-label-wrapper").show();
-          $("#paint-controls").show();
-
-          viewer.loadModelFromURL('/models/surf_reg_model_both.obj', {
-            format: "mniobj",
-            complete: function() {
-              viewer.loadIntensityDataFromURL("/assets/aal_atlas.txt", {
-                complete: hideLoading
-              });
-            },
-            cancel: defaultCancelOptions(current_request),
-            parse: { split: true }
-          });
-        },
-        dbs: function() {
-          viewer.annotations.setMarkerRadius(0.3);
-          $("#vertex-data-wrapper").show();
-
-          viewer.loadModelFromURL("/models/dbs.json", {
-            format: "json",
-            complete: function() {
-              var i;
-
-              for (i = 17; i <= 93; i++) {
-                viewer.setTransparency(0.8, {
-                  shape_name: "dbs.json_" + i
-                });
-              }
-            },
-            cancel: defaultCancelOptions(current_request)
-          });
-
-          viewer.loadModelFromURL("/models/dbs-fibers.json", {
-            format: "json",
-            complete: function() {
-              var i;
-
-              hideLoading();
-
-              for (i = 1; i <= 664; i++) {
-                viewer.setTransparency(0.6, {
-                  shape_name: "dbs-fibers.json_" + i
-                });
-              }
-            },
-            cancel: defaultCancelOptions(current_request)
-          });
-
-          viewer.loadModelFromURL("/models/dbs-vat.json", {
-            format: "json",
-            cancel: defaultCancelOptions(current_request)
-          });
-
-          viewer.zoom = 1.8;
-
-          matrixRotX = new THREE.Matrix4();
-          matrixRotX.makeRotationX(-0.5 * Math.PI);
-          matrixRotY = new THREE.Matrix4();
-          matrixRotY.makeRotationY(-0.8 * Math.PI);
-          matrixRotZ = new THREE.Matrix4();
-          matrixRotZ.makeRotationZ(-0.1 * Math.PI);
-
-          viewer.model.applyMatrix(matrixRotY.multiply(matrixRotZ.multiply(matrixRotX)));
-        },
-        punkdti: function() {
-          viewer.loadModelFromURL('/models/dti.obj', {
-            format: "mniobj",
-            render_depth: 999,
-            complete: hideLoading,
-            cancel: defaultCancelOptions(current_request)
-          });
-          viewer.loadModelFromURL('/models/left_color.obj', {
-            format: "mniobj",
-            complete: function() {
-              viewer.setTransparency(0, {
-                shape_name: "left_color.obj_1"
-              });
-            },
-            cancel: defaultCancelOptions(current_request)
-          });
-          viewer.loadModelFromURL('/models/right_color.obj', {
-            format: "mniobj",
-            cancel: defaultCancelOptions(current_request)
-          });
-
-          viewer.model.rotation.x = -Math.PI / 2;
-          viewer.model.rotation.z = Math.PI / 2;
-        },
-        realct: function() {
-          viewer.annotations.setMarkerRadius(1.5);
-          $("#vertex-data-wrapper").show();
-          $("#pick-value-wrapper").show();
-          $("#paint-controls").show();
-
-          viewer.loadModelFromURL('/models/realct.obj', {
-            format: "mniobj",
-            parse: { split: true },
-            complete: function() {
-              viewer.loadIntensityDataFromURL('/models/realct.txt', {
-                name: "Cortical Thickness",
-                complete: hideLoading,
-                cancel: defaultCancelOptions(current_request)
-              });
-            },
-            cancel: defaultCancelOptions(current_request)
-          });
-        },
-        car: function() {
-          viewer.annotations.setMarkerRadius(0.5);
-          viewer.loadModelFromURL('/models/car.obj', {
-            format: "wavefrontobj",
-            complete: function() {
-              $("#vertex-data-wrapper").show();
-              hideLoading();
-            },
-            cancel: defaultCancelOptions(current_request)
-          });
-
-          // This model is somewhat small so zoom in and
-          // give it a dramatic angle.
-          viewer.zoom = 5;
-
-          matrixRotX = new THREE.Matrix4();
-          matrixRotX.makeRotationX(-0.25 * Math.PI);
-          matrixRotY = new THREE.Matrix4();
-          matrixRotY.makeRotationY(0.4 * Math.PI);
-
-          viewer.model.applyMatrix(matrixRotY.multiply(matrixRotX));
-        },
-        plane: function() {
-          viewer.annotations.setMarkerRadius(0.3);
-          viewer.loadModelFromURL('/models/dlr_bigger.streamlines.obj', {
-            format: "mniobj",
-            cancel: defaultCancelOptions(current_request)
-          });
-          viewer.loadModelFromURL('/models/dlr.model.obj', {
-            format: "mniobj",
-            complete: function() {
-              $("#vertex-data-wrapper").show();
-              hideLoading();
-            },
-            cancel: defaultCancelOptions(current_request)
-          });
-
-          // This model is somewhat small so zoom in and
-          // give it a dramatic angle.
-          viewer.zoom = 7;
-
-          matrixRotX = new THREE.Matrix4();
-          matrixRotX.makeRotationX(-0.25 * Math.PI);
-          matrixRotY = new THREE.Matrix4();
-          matrixRotY.makeRotationY(0.4 * Math.PI);
-
-          viewer.model.applyMatrix(matrixRotY.multiply(matrixRotX));
-        },
-        mouse: function() {
-          viewer.annotations.setMarkerRadius(0.2);
-          viewer.loadModelFromURL('/models/mouse_surf.obj', {
-            format: "mniobj",
-            render_depth: 999,
-            complete: function() {
-              $("#vertex-data-wrapper").show();
-              viewer.loadIntensityDataFromURL('/models/mouse_alzheimer_map.txt', {
-                  name: 'Cortical Amyloid Burden, Tg AD Mouse, 18 Months Old',
-                  apply_to_shape: "mouse_surf.obj_1",
-                  min: 0.0,
-                  max: 0.25,
-                  complete: hideLoading,
-                  cancel: defaultCancelOptions(current_request)
-                }
-              );
-            },
-            cancel: defaultCancelOptions(current_request)
-          });
-          viewer.loadModelFromURL('/models/mouse_brain_outline.obj', {
-            format: "mniobj",
-            complete: function() {
-              // Set the transparency of the outer shell and move the slider
-              // to the right position.
-              $(".opacity-slider[data-shape-name='mouse_brain_outline.obj_1']").slider("value", 50);
-              viewer.setTransparency(0.5, {
-                shape_name: "mouse_brain_outline.obj"
-              });
-            },
-            cancel: defaultCancelOptions(current_request)
-          });
-
-          // Smaller model so zoom in.
-          viewer.zoom = 11;
-        },
-        freesurfer: function() {
-          $("#vertex-data-wrapper").show();
-          $("#pick-value-wrapper").show();
-          $("#paint-controls").show();
-
-          viewer.annotations.setMarkerRadius(1.5);
-          viewer.loadModelFromURL('/models/lh.white.asc', {
-            format: "freesurferasc",
-            complete: function() {
-              viewer.loadIntensityDataFromURL("/models/lh.thickness.asc", {
-                  format: "freesurferasc",
-                  name: "Cortical Thickness",
-                  complete: hideLoading,
-                  cancel: defaultCancelOptions(current_request)
-                }
-              );
-            },
-            cancel: defaultCancelOptions(current_request)
-          });
-        }
-      };
-      
-      if (examples.hasOwnProperty(name)) {
-        examples[name]();
-      }
-      
-      return false;
-      
-    });
-
     // If the user changes the format that's being submitted,
     // display a hint if one has been configured.
     $(".file-format").change(function() {
@@ -819,8 +527,6 @@ $(function() {
     // selected.
     $("#obj-file-submit").click(function() {
       var format = $(this).closest(".file-select").find("option:selected").val();
-
-      $("#vertex-data-wrapper").show();
 
       showLoading();
       viewer.loadModelFromFile(document.getElementById("objfile"), {
@@ -835,9 +541,6 @@ $(function() {
       var format = $(this).closest(".file-select").find("option:selected").val();
       var file = document.getElementById("datafile1");
 
-      $("#pick-value-wrapper").show();
-      $("#paint-controls").show();
-
       viewer.loadIntensityDataFromFile(file, {
         format: format,
         blend_index : 0
@@ -847,9 +550,6 @@ $(function() {
     $("#data2-submit").click(function() {
       var format = $(this).closest(".file-select").find("option:selected").val();
       var file = document.getElementById("datafile2");
-
-      $("#pick-value-wrapper").show();
-      $("#paint-controls").show();
 
       viewer.loadIntensityDataFromFile(file, {
         format: format,
@@ -877,6 +577,7 @@ $(function() {
 
       if (pick_info) {
         $("#pick-name").html(pick_info.object.name);
+        $("#pick-shape-number").html(shapeNumber(pick_info.object.name));
         $("#pick-x").html(pick_info.point.x.toPrecision(4));
         $("#pick-y").html(pick_info.point.y.toPrecision(4));
         $("#pick-z").html(pick_info.point.z.toPrecision(4));
@@ -951,17 +652,27 @@ $(function() {
 
       } else {
         picked_object = null;
+
+        $("#pick-name").html("");
+        $("#pick-shape-number").html("");
         $("#pick-x").html("");
         $("#pick-y").html("");
         $("#pick-z").html("");
         $("#pick-index").html("");
-        $("#pick-value").val("");
-        $("#pick-color").css("background-color", "#000000");
-        $("#annotation-wrapper").hide();
-        $("#annotation-display").hide();
       }
 
       viewer.updated = true;
+    }
+
+    function shapeNumber(name) {
+      var children = viewer.model.children;
+      var i, count;
+
+      for (i = 0, count = children.length; i < count; i++) {
+        if (children[i].name === name) {
+          return i + 1;
+        }
+      }
     }
   });
 });
