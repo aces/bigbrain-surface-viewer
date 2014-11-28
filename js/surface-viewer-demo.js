@@ -30,6 +30,7 @@ $(function() {
   "use strict";
   
   var atlas_labels = {};
+  var autoshapes  = [];
 
   // Request variables used to cancel the current request
   // if another request is started.
@@ -116,8 +117,15 @@ $(function() {
           });
           slider.appendTo(slider_div);
           slider_div.appendTo("#shapes");
+	autoshapes[i]={};
+	autoshapes[i].label = shape.name;
         });
       }
+
+    $("#searchshapes").autocomplete({
+	source: autoshapes
+    }).autocomplete("widget").addClass("fixed-height");
+
     });
 
     // When the screen is cleared, remove all UI related
@@ -337,8 +345,53 @@ $(function() {
     // Reset to the default view.
     $("#resetview").click(function() {
       // Setting the view to its current view type will
-      // automatically reset its position.
+      // automatically reset its position and opacity is reset to 100% for all shapes.
       viewer.setView($("[name=hem-view]:checked").val());
+        viewer.model.children.forEach(function(child) {
+                viewer.setTransparency(1, {shape_name: child.name});
+                $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+        });
+    });
+
+	var toggle = "off";
+	var slider_backup = {};
+
+    // Toggle opacity.
+    $("#toggleopacity").click(function() {
+
+      viewer.model.children.forEach(function(child) {
+
+        if (  toggle == "off") {
+          slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+          viewer.setTransparency(1, {shape_name: child.name});
+          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+        } else {
+          var alpha = slider_backup[child.name] / 100;
+          viewer.setTransparency(alpha, {shape_name: child.name});
+          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
+	}
+      });
+      if (  toggle == "off") {
+	toggle = "on";
+      } else {
+        toggle = "off";
+      }
+    });
+
+    // If Search box "Go" button pressed
+
+    $("#gosearch").click(function() {
+       viewer.model.children.forEach(function(child, i) {
+		if (child.name.contains(searchshapes.value)) {
+			console.log(child.name); 
+		window.location.hash = "#shape-" + i;
+		}
+        });
+    });
+
+    // If Search box "Clear" button pressed
+    $("#clearsearch").click(function() {
+	document.getElementById("searchshapes").value="";
     });
 
     // Set the visibility of the currently loaded model.
@@ -455,6 +508,7 @@ $(function() {
 
       viewer.model.children.forEach(function(child) {
         if (child.name !== name) {
+          slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
           viewer.setTransparency(0, {shape_name: child.name});
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
         }
@@ -468,8 +522,11 @@ $(function() {
 
       viewer.model.children.forEach(function(child) {
         if (child.name !== name) {
-          viewer.setTransparency(1, {shape_name: child.name});
-          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 1);
+
+	var alpha = slider_backup[child.name] / 100;
+
+          viewer.setTransparency(alpha, {shape_name: child.name});
+          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
         }
       });
     });
@@ -583,13 +640,11 @@ $(function() {
         $("#pick-z").html(pick_info.point.z.toPrecision(4));
         $("#pick-index").html(pick_info.index);
         $("#annotation-wrapper").show();
-        
         picked_object = pick_info.object;
         model_data = viewer.model_data.get(picked_object.model_name);
         if (model_data.intensity_data) {
           if (paint) {
             value = parseFloat($("#paint-value").val());
-
             if (BrainBrowser.utils.isNumeric(value)) {
               viewer.setIntensity(pick_info.index, value);
             }
@@ -676,4 +731,3 @@ $(function() {
     }
   });
 });
-

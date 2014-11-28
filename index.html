@@ -67,6 +67,7 @@
               <div class="format-hint"></div>
               <div id="obj-file-submit-div" class="file-submit-div">
                 <span id="obj-file-submit" class="button file-submit">Load</span>
+	        <span id="clearshapes" class="button">Unload All</span>
               </div>
             </div>
           </div>
@@ -89,11 +90,20 @@
                 <input type="checkbox" class="button" id="threedee"><label for="threedee">3D Glasses!</label>
                 <span id="screenshot" class="button">Screenshot</span>
               </div>
+              <div class="button-row">
+                <a class="button" id="toggleopacity">Toggle Opacity</a>
+              </div>
+		<div class="ui-widget">
+		<input id="searchshapes" type="text" placeholder="Search Shapes">
+		</div> 
+		<div class="button-row">
+		<a class="button" id="gosearch">Go!</a>
+		<a class="button" id="clearsearch">Clear</a>
+		</div>
             </div>
             <div id="shape-cell" class="box full-box bordered-box">
               <div id="shapes">
               </div>
-              <span id="clearshapes" class="button">Clear Shapes</span>
             </div>
           </div>        
           <div id="background-select" class="box full-box">
