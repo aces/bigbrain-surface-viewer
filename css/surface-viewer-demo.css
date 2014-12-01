@@ -327,6 +327,14 @@ div#format-hints {
   min-height: 1em;
 }
 
+.alignleft {
+	float: left;
+}
+
+.alignright {
+	float: right;
+}
+
 #atlas-label {
   position: absolute;
   left: 15px;
