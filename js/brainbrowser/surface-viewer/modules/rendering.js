@@ -262,7 +262,7 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
   * viewer.pick(125, 250);  // Pick at given position.
   * ```
   */
-  viewer.pick = function(x, y) {
+  viewer.pick = function(x, y, slider_backup) {
     x = x === undefined ? viewer.mouse.x : x;
     y = y === undefined ? viewer.mouse.y : y;
 
@@ -281,8 +281,9 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
     var min_distance;
     var original_vertices, original_indices;
     var index, coords, distance;
-    var i, count;
+    var i, j, count;
     var centroid, cx, cy, cz;
+    var opacity_threshold = 25; //somewhat arbitrary threshold of 25%
 
     // Because we're comparing against
     // the vertices in their original positions,
@@ -295,7 +296,10 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
     intersects = raycaster.intersectObject(model, true);
 
     for (i = 0; i < intersects.length; i++) {
-      if (!intersects[i].object.__PICK_IGNORE__) {
+      
+      if (slider_backup[intersects[i].object.name] < opacity_threshold){
+	intersects[i].object.__PICK_IGNORE__ = true;
+      } else {
         intersection = intersects[i];
         break;
       }

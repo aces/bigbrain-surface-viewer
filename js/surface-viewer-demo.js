@@ -28,9 +28,6 @@
 // BrainBrowser Surface Viewer.
 $(function() {
   "use strict";
-  
-  var atlas_labels = {};
-  var autoshapes  = [];
 
   // Request variables used to cancel the current request
   // if another request is started.
@@ -55,6 +52,12 @@ $(function() {
   window.viewer = BrainBrowser.SurfaceViewer.start("brainbrowser", function(viewer) {
 
     var picked_object;
+    var atlas_labels = {};
+    var autoshapes  = [];
+    var selected_object = "none";
+    var focus_toggle = "off";
+    var opacity_toggle = "off";
+    var slider_backup = {};
 
     // Add the three.js 3D anaglyph effect to the viewer.
     viewer.addEffect("AnaglyphEffect");
@@ -95,7 +98,9 @@ $(function() {
       if(children.length - current_count > 0 ) {
         children.slice(current_count).forEach(function(shape, i) {
           slider_div = $("<div id=\"shape-" + i + "\" class=\"shape\">" +
-            "<h4>Shape "+ (i + 1 + current_count) + "</h4>" +
+            "<h4> <p class=\"alignleft\"> Shape "+ (i + 1 + current_count) + "</p></h4>" + 
+	    "<div id=\"top-" + i + "\" style=\"visibility: hidden\"><a href=\"#shape-0\"><p class=\"alignright\">back to top</a></p></div>" + "<br />" +
+            "<div style=\"clear: both;\">" +
             "Name: " + shape.name + "<br />" +
             "Opacity: " +
             "</div>");
@@ -122,10 +127,9 @@ $(function() {
         });
       }
 
-    $("#searchshapes").autocomplete({
-	source: autoshapes
-    }).autocomplete("widget").addClass("fixed-height");
-
+      $("#searchshapes").autocomplete({
+        source: autoshapes
+      }).autocomplete("widget").addClass("fixed-height");
     });
 
     // When the screen is cleared, remove all UI related
@@ -348,20 +352,17 @@ $(function() {
       // automatically reset its position and opacity is reset to 100% for all shapes.
       viewer.setView($("[name=hem-view]:checked").val());
         viewer.model.children.forEach(function(child) {
-                viewer.setTransparency(1, {shape_name: child.name});
-                $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+          viewer.setTransparency(1, {shape_name: child.name});
+          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
         });
     });
-
-	var toggle = "off";
-	var slider_backup = {};
 
     // Toggle opacity.
     $("#toggleopacity").click(function() {
 
       viewer.model.children.forEach(function(child) {
 
-        if (  toggle == "off") {
+        if (  opacity_toggle == "off") {
           slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
           viewer.setTransparency(1, {shape_name: child.name});
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
@@ -371,27 +372,40 @@ $(function() {
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
 	}
       });
-      if (  toggle == "off") {
-	toggle = "on";
+      if (  opacity_toggle == "off") {
+	opacity_toggle = "on";
       } else {
-        toggle = "off";
+        opacity_toggle = "off";
       }
     });
 
     // If Search box "Go" button pressed
 
     $("#gosearch").click(function() {
-       viewer.model.children.forEach(function(child, i) {
-		if (child.name.contains(searchshapes.value)) {
-			console.log(child.name); 
-		window.location.hash = "#shape-" + i;
-		}
-        });
+      viewer.model.children.forEach(function(child, i) {
+	var anchor = "shape-" + i;
+	var anchor_top = "top-" + i;
+	if (child.name.contains(searchshapes.value)) {
+	  selected_object = "search";
+  	  window.location.hash = "#" + anchor;
+	  document.getElementById(anchor).style.backgroundColor = 'blue';
+	  document.getElementById(anchor_top).style.visibility = 'visible';
+          viewer.setTransparency(1, {shape_name: child.name});
+          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+	} else {   //focus selected object, no need for shift-click
+	  document.getElementById(anchor).style.backgroundColor = 'black';
+	  document.getElementById(anchor_top).style.visibility = 'hidden';
+	  slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+          viewer.setTransparency(0, {shape_name: child.name});
+          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+	  focus_toggle = "on";
+	}
+      });
     });
 
     // If Search box "Clear" button pressed
     $("#clearsearch").click(function() {
-	document.getElementById("searchshapes").value="";
+      document.getElementById("searchshapes").value="";
     });
 
     // Set the visibility of the currently loaded model.
@@ -498,37 +512,59 @@ $(function() {
 
     $("#brainbrowser").click(function(event) {
       if (!event.shiftKey) return;
+      viewer.model.children.forEach(function(child) {
+      slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+	});
       pick(viewer.mouse.x, viewer.mouse.y, event.ctrlKey);
+      selected_object = "click";
+      viewer.model.children.forEach(function(child, i) {
+        var anchor = "shape-" + i;
+        var anchor_top = "top-" + i;
+        if (child.name.contains(picked_object.name)) {
+          window.location.hash = "#" + anchor;
+          document.getElementById(anchor).style.backgroundColor = 'blue';
+          document.getElementById(anchor_top).style.visibility = 'visible';
+        } else {   //focus selected object, no need for shift-click
+          document.getElementById(anchor).style.backgroundColor = 'black';
+          document.getElementById(anchor_top).style.visibility = 'hidden';
+        }
+      });
+
     });
 
     $("#focus-shape").click(function(event) {
-      var name = $("#pick-name").html();
 
-      if (name === "") return;
+      var name;
 
-      viewer.model.children.forEach(function(child) {
-        if (child.name !== name) {
-          slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
-          viewer.setTransparency(0, {shape_name: child.name});
-          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
-        }
-      });
-    });
+	if (selected_object === "click"){ 
+      	  name = $("#pick-name").html();
+	} else if (selected_object === "search"){
+      	  name = searchshapes.value;
+	} else {
+	  return;
+	}
 
-    $("#unfocus-shape").click(function(event) {
-      var name = $("#pick-name").html();
+	if (focus_toggle == "off"){
+      	  viewer.model.children.forEach(function(child) {
+	    if (child.name !== name) {
+              slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+	      viewer.setTransparency(0, {shape_name: child.name});
+              $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+            }
+      	  });
+	focus_toggle = "on";
+	} else if (focus_toggle == "on"){
+          viewer.model.children.forEach(function(child) {
+            if (child.name !== name) {
 
-      if (name === "") return;
+            var alpha = slider_backup[child.name] / 100;
 
-      viewer.model.children.forEach(function(child) {
-        if (child.name !== name) {
-
-	var alpha = slider_backup[child.name] / 100;
-
-          viewer.setTransparency(alpha, {shape_name: child.name});
-          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
-        }
-      });
+            viewer.setTransparency(alpha, {shape_name: child.name});
+            $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
+            }
+          });
+        focus_toggle = "off";
+	}
     });
 
     document.getElementById("brainbrowser").addEventListener("touchend", function(event) {
@@ -627,7 +663,8 @@ $(function() {
 
       var annotation_display = $("#annotation-display");
       var media = $("#annotation-media");
-      var pick_info = viewer.pick(x, y);
+//      var pick_info = viewer.pick(x, y);
+      var pick_info = viewer.pick(x, y, slider_backup);
       var model_data;
       var annotation_info;
       var value, label, text;
