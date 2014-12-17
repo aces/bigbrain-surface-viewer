@@ -262,131 +262,158 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
   * viewer.pick(125, 250);  // Pick at given position.
   * ```
   */
-  viewer.pick = function(x, y, slider_backup) {
+  viewer.pick = function(x, y, slider_backup,searchindex) { //if x,y defined, find index;  if index defined (via search), find x,y
     x = x === undefined ? viewer.mouse.x : x;
     y = y === undefined ? viewer.mouse.y : y;
 
-    // Convert to normalized coordinates.
-    x = (x / viewer.dom_element.offsetWidth) * 2 - 1;
-    y = (-y / viewer.dom_element.offsetHeight) * 2 + 1;
-
     var model = viewer.model;
-    var projector = new THREE.Projector();
-    var raycaster = new THREE.Raycaster();
-    var vector = new THREE.Vector3(x, y, camera.near);
-    var intersection = null;
-    var intersects, vertex_data;
-    var intersect_object, intersect_point, intersect_indices;
-    var intersect_vertex_index, intersect_vertex_coords;
-    var min_distance;
-    var original_vertices, original_indices;
-    var index, coords, distance;
-    var i, j, count;
-    var centroid, cx, cy, cz;
-    var opacity_threshold = 25; //somewhat arbitrary threshold of 25%
+    var vertex_data;
 
-    // Because we're comparing against
-    // the vertices in their original positions,
-    // we have move everything to place the model at its
-    // original position.
-    var inv_matrix = new THREE.Matrix4();
+    if ((searchindex !== "") && (/^\d+$/.test(searchindex))){  // If strictly numeric, search by vertex number
 
-    projector.unprojectVector(vector, camera);
-    raycaster.set(camera.position, vector.sub(camera.position).normalize());
-    intersects = raycaster.intersectObject(model, true);
+      var intersect_object;
 
-    for (i = 0; i < intersects.length; i++) {
-      
-      if (slider_backup[intersects[i].object.name] < opacity_threshold){
-	intersects[i].object.__PICK_IGNORE__ = true;
-      } else {
-        intersection = intersects[i];
-        break;
+      var vector = viewer.getVertex(searchindex); //find xyz coords of vertex number
+      var model_data = viewer.model_data.get();
+
+      for (i = 0; i < viewer.model.children.length; i++) {
+
+	var vertices = model_data.shapes[i].indices;
+
+ 	for (j = 0; j < vertices.length; j++) {
+ 	  if (vertices[j] == searchindex){
+	    intersect_object = model_data.shapes[i];
+            searchindex = parseInt(searchindex);
+            vertex_data = {
+              index: searchindex,
+              point: vector,
+              object: intersect_object
+            };
+	    break
+	  }
+  	}
       }
-    }
+    } else {	//if searching by shift-click (and not searchstring), find intersection
+      // Convert to normalized coordinates.
+      x = (x / viewer.dom_element.offsetWidth) * 2 - 1;
+      y = (-y / viewer.dom_element.offsetHeight) * 2 + 1;
 
-    if (intersection !== null) {
+      var projector = new THREE.Projector();
+      var raycaster = new THREE.Raycaster();
+      var vector = new THREE.Vector3(x, y, camera.near);
 
-      intersect_object = intersection.object;
-      intersect_indices = intersection.indices;
+      var intersection = null;
+      var intersects, vertex_data;
+      var intersect_object, intersect_point, intersect_indices;
+      var intersect_vertex_index, intersect_vertex_coords;
+      var min_distance;
+      var original_vertices, original_indices;
+      var index, coords, distance;
+      var i, j, count;
+      var centroid, cx, cy, cz;
+      var opacity_threshold = 25; //somewhat arbitrary threshold of 25%
 
-      if (intersect_object.annotation_info) {
-        vertex_data = {
-          index: intersect_object.annotation_info.vertex,
-          point: intersect_object.annotation_info.position,
-          object: intersect_object
-        };
-      } else {
-        // We're dealing with an imported model.
+      // Because we're comparing against
+      // the vertices in their original positions,
+      // we have move everything to place the model at its
+      // original position.
+      var inv_matrix = new THREE.Matrix4();
 
-        // Objects have their origins centered
-        // to help with transparency, so to check
-        // check against original vertices we have
-        // move them back.
-        centroid = intersect_object.centroid;
-        cx = centroid.x;
-        cy = centroid.y;
-        cz = centroid.z;
+      projector.unprojectVector(vector, camera);
+      raycaster.set(camera.position, vector.sub(camera.position).normalize());
+      intersects = raycaster.intersectObject(model, true);
 
-        inv_matrix.getInverse(intersect_object.matrixWorld);
-        intersect_point = intersection.point.applyMatrix4(inv_matrix);
+      for (i = 0; i < intersects.length; i++) {
+      
+        if (slider_backup[intersects[i].object.name] < opacity_threshold){
+	  intersects[i].object.__PICK_IGNORE__ = true;
+        } else {
+          intersection = intersects[i];
+          break;
+        }
+      }
 
-        original_vertices = intersect_object.geometry.original_data.vertices;
-        original_indices = intersect_object.geometry.original_data.indices;
+        if (intersection !== null) {
 
-        // Have to get the vertex pointed to by the original index because of
-        // the de-indexing (see workers/deindex.worker.js)
-        intersect_vertex_index = index = original_indices[intersect_indices[0]];
-        intersect_vertex_coords = new THREE.Vector3(
-          original_vertices[index*3],
-          original_vertices[index*3+1],
-          original_vertices[index*3+2]
-        );
+        intersect_object = intersection.object;
+        intersect_indices = intersection.indices;
 
-        //Compensate for a translated center.
-        min_distance = intersect_point.distanceTo(
-          new THREE.Vector3(
-            intersect_vertex_coords.x - cx,
-            intersect_vertex_coords.y - cy,
-            intersect_vertex_coords.z - cz
-          )
-        );
+        if (intersect_object.annotation_info) {
+          vertex_data = {
+            index: intersect_object.annotation_info.vertex,
+            point: intersect_object.annotation_info.position,
+            object: intersect_object
+          };
+	  return vertex_data;
+        } else {
+          // We're dealing with an imported model.
 
-        for (i = 1, count = intersect_indices.length; i < count; i++) {
-          index = original_indices[intersect_indices[i]];
-          coords = new THREE.Vector3(
+          // Objects have their origins centered
+          // to help with transparency, so to check
+          // check against original vertices we have
+          // move them back.
+          centroid = intersect_object.centroid;
+          cx = centroid.x;
+          cy = centroid.y;
+          cz = centroid.z;
+
+          inv_matrix.getInverse(intersect_object.matrixWorld);
+          intersect_point = intersection.point.applyMatrix4(inv_matrix);
+
+          original_vertices = intersect_object.geometry.original_data.vertices;
+          original_indices = intersect_object.geometry.original_data.indices;
+
+          // Have to get the vertex pointed to by the original index because of
+          // the de-indexing (see workers/deindex.worker.js)
+          intersect_vertex_index = index = original_indices[intersect_indices[0]];
+          intersect_vertex_coords = new THREE.Vector3(
             original_vertices[index*3],
             original_vertices[index*3+1],
             original_vertices[index*3+2]
           );
-          distance = intersect_point.distanceTo(
+
+          //Compensate for a translated center.
+          min_distance = intersect_point.distanceTo(
             new THREE.Vector3(
-              coords.x - cx,
-              coords.y - cy,
-              coords.z - cz
+              intersect_vertex_coords.x - cx,
+              intersect_vertex_coords.y - cy,
+              intersect_vertex_coords.z - cz
             )
           );
 
-          if (distance < min_distance) {
-            intersect_vertex_index = index;
-            intersect_vertex_coords = coords;
-            min_distance = distance;
+          for (i = 1, count = intersect_indices.length; i < count; i++) {
+            index = original_indices[intersect_indices[i]];
+            coords = new THREE.Vector3(
+              original_vertices[index*3],
+              original_vertices[index*3+1],
+              original_vertices[index*3+2]
+            );
+            distance = intersect_point.distanceTo(
+              new THREE.Vector3(
+                coords.x - cx,
+                coords.y - cy,
+                coords.z - cz
+              )
+            );
+
+            if (distance < min_distance) {
+              intersect_vertex_index = index;
+              intersect_vertex_coords = coords;
+              min_distance = distance;
+            }
+
           }
 
+          vertex_data = {
+            index: intersect_vertex_index,
+            point: intersect_vertex_coords,
+            object: intersect_object
+          };
         }
-
-        vertex_data = {
-          index: intersect_vertex_index,
-          point: intersect_vertex_coords,
-          object: intersect_object
-        };
+      } else {
+        vertex_data = null;
       }
-      
-
-    } else {
-      vertex_data = null;
     }
-
     return vertex_data;
   };
   

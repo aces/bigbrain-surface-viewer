@@ -197,8 +197,9 @@ a:visited {
 }
 
 .slider {
-  width: 70%;
+  width: 40%;
   margin: 5px auto;
+  margin-right: 20px;
 }
 
 .half-box .slider {
@@ -333,6 +334,12 @@ div#format-hints {
 
 .alignright {
 	float: right;
+}
+
+.aligncenter {
+  display: block; 
+  margin-left: auto; 
+  margin-right: auto;
 }
 
 #atlas-label {
