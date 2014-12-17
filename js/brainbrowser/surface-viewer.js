@@ -355,7 +355,6 @@
           options = options || {};
           var vertices = viewer.model_data.get(options.model_name).vertices;
           var i = index * 3;
-          
           return new THREE.Vector3(vertices[i], vertices[i+1], vertices[i+2]);
         }
       };

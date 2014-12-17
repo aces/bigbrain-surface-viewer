@@ -36,8 +36,16 @@
           <div>Y: <span id="pick-y" class="pick-data"></span></div>
           <div>Z: <span id="pick-z" class="pick-data"></span></div>
           <div>Vertex number: <span id="pick-index" class="pick-data"></span></div>
+	<br>
+          <span id="focus-shape" class="button">Focus / Unfocus This Shape</span>
           <div style="margin-top:20px;">
-            <span id="focus-shape" class="button">Focus / Unfocus This Shape</span>
+          <div class="ui-widget">
+          <input id="searchshapes" type="text" placeholder="Search Shapes">
+          </div>
+          <div class="button-row">
+          <a class="button" id="gosearch">Go!</a>
+          <a class="button" id="clearsearch">Clear</a>
+          </div>
           </div>
         </div>
       </div>
@@ -88,15 +96,11 @@
                 <span id="screenshot" class="button">Screenshot</span>
               </div>
               <div class="button-row">
-                <a class="button" id="toggleopacity">Toggle Opacity</a>
+                <a class="button" id="toggleopacitycustom">Toggle Opacity On/Custom</a>
               </div>
-		<div class="ui-widget">
-		<input id="searchshapes" type="text" placeholder="Search Shapes">
-		</div> 
-		<div class="button-row">
-		<a class="button" id="gosearch">Go!</a>
-		<a class="button" id="clearsearch">Clear</a>
-		</div>
+              <div class="button-row">
+                <a class="button" id="toggleopacityonoff">Toggle Opacity On/Off</a>
+              </div>
             </div>
             <div id="shape-cell" class="box full-box bordered-box">
               <div id="shapes">

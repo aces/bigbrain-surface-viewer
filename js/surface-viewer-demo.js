@@ -56,8 +56,11 @@ $(function() {
     var autoshapes  = [];
     var selected_object = "none";
     var focus_toggle = "off";
-    var opacity_toggle = "off";
+    var opacity_toggle_custom = "off";
+    var opacity_toggle_onoff = "none";
+    var opacity_toggle_indiv_onoff = {};
     var slider_backup = {};
+    var searchindex= "" ;
 
     // Add the three.js 3D anaglyph effect to the viewer.
     viewer.addEffect("AnaglyphEffect");
@@ -91,20 +94,20 @@ $(function() {
     // When a new model is added to the viewer, create a transparancy slider
     // for each shape that makes up the model.
     viewer.addEventListener("displaymodel", function(object) {
-      var slider, slider_div;
+      var slider, slider_div, slider_div_end;
       var children = object.children;
       var current_count = $("#shapes").children().length;
 
       if(children.length - current_count > 0 ) {
         children.slice(current_count).forEach(function(shape, i) {
           slider_div = $("<div id=\"shape-" + i + "\" class=\"shape\">" +
-            "<h4> <p class=\"alignleft\"> Shape "+ (i + 1 + current_count) + "</p></h4>" + 
-	    "<div id=\"top-" + i + "\" style=\"visibility: hidden\"><a href=\"#shape-0\"><p class=\"alignright\">back to top</a></p></div>" + "<br />" +
+            "<h4> <p class=\"alignleft\"> Shape " + (i + 1 + current_count) + "</p></h4>" + 
+	    "<div id=\"top-" + i + "\" style=\"visibility: hidden\"><a href=\"#surface-choice\"><p class=\"alignright\">back to top</a></p></div><br />" +
             "<div style=\"clear: both;\">" +
             "Name: " + shape.name + "<br />" +
-            "Opacity: " +
-            "</div>");
-          slider = $("<div class=\"opacity-slider slider\" data-shape-name=\"" + shape.name + "\"></div>");
+            "<p class=\"alignleft\"> Opacity: </p></div>");
+          slider = $("<div class=\"opacity-slider aligncenter slider\" data-shape-name=\"" + shape.name + "\">");
+	  slider_div_end = $("<div id=\"test\"><p class=\"alignright\"><a class=\"button\" id=\"individualtoggleopacity" +  i + "\">On</a></p></div>");
           slider.slider({
             value: 100,
             min: -1,
@@ -120,10 +123,26 @@ $(function() {
               });
             }
           });
+
+          slider_div_end.appendTo(slider_div);
           slider.appendTo(slider_div);
           slider_div.appendTo("#shapes");
-	autoshapes[i]={};
-	autoshapes[i].label = shape.name;
+	  autoshapes[i]={};
+	  autoshapes[i].label = shape.name;
+          opacity_toggle_indiv_onoff[i] = "on";
+          $("#individualtoggleopacity" + i).click(function() {
+	    if (opacity_toggle_indiv_onoff[i] == "on"){
+              viewer.setTransparency(0, {shape_name: shape.name});
+              $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value", 0);
+	      opacity_toggle_indiv_onoff[i] = "off";
+              $(this).html("Off");
+	    } else {
+              viewer.setTransparency(1, {shape_name: shape.name});
+              $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value", 100);
+              opacity_toggle_indiv_onoff[i] = "on";
+              $(this).html("On");
+	    }
+          });
         });
       }
 
@@ -357,12 +376,12 @@ $(function() {
         });
     });
 
-    // Toggle opacity.
-    $("#toggleopacity").click(function() {
+    // Toggle opacity (custom vs. on).
+    $("#toggleopacitycustom").click(function() {
 
       viewer.model.children.forEach(function(child) {
 
-        if (  opacity_toggle == "off") {
+        if (  opacity_toggle_custom == "off") {
           slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
           viewer.setTransparency(1, {shape_name: child.name});
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
@@ -372,40 +391,100 @@ $(function() {
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
 	}
       });
-      if (  opacity_toggle == "off") {
-	opacity_toggle = "on";
+      if (  opacity_toggle_custom == "off") {
+	opacity_toggle_custom = "on";
       } else {
-        opacity_toggle = "off";
+        opacity_toggle_custom = "off";
+      }
+    });
+
+    // Toggle opacity (on vs. off).
+    $("#toggleopacityonoff").click(function() {
+
+      viewer.model.children.forEach(function(child) {
+
+        if (  opacity_toggle_onoff == "all") {
+          slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+          viewer.setTransparency(1, {shape_name: child.name});
+          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+        } else {
+          viewer.setTransparency(0, {shape_name: child.name});
+          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+        }
+      });
+      if (  opacity_toggle_onoff == "all") {
+        opacity_toggle_onoff = "none";
+      } else {
+        opacity_toggle_onoff = "all";
       }
     });
 
     // If Search box "Go" button pressed
 
     $("#gosearch").click(function() {
-      viewer.model.children.forEach(function(child, i) {
-	var anchor = "shape-" + i;
-	var anchor_top = "top-" + i;
-	if (child.name.contains(searchshapes.value)) {
-	  selected_object = "search";
-  	  window.location.hash = "#" + anchor;
-	  document.getElementById(anchor).style.backgroundColor = 'blue';
-	  document.getElementById(anchor_top).style.visibility = 'visible';
-          viewer.setTransparency(1, {shape_name: child.name});
-          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
-	} else {   //focus selected object, no need for shift-click
-	  document.getElementById(anchor).style.backgroundColor = 'black';
-	  document.getElementById(anchor_top).style.visibility = 'hidden';
-	  slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
-          viewer.setTransparency(0, {shape_name: child.name});
-          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
-	  focus_toggle = "on";
-	}
-      });
+      if ((searchshapes.value !== "") && (!/^\d+$/.test(searchshapes.value))){  //Only do the following if string is not blank & contains some text (i.e. not strictly numeric)
+        viewer.model.children.forEach(function(child, i) {
+	  var anchor = "shape-" + i;
+  	  var anchor_top = "top-" + i;
+	  if (child.name == searchshapes.value) {
+	    selected_object = "search";
+       	    window.location.hash = "#" + anchor;
+	    document.getElementById(anchor).style.backgroundColor = "#1E8FFF";
+	    document.getElementById(anchor_top).style.visibility = 'visible';
+            viewer.setTransparency(1, {shape_name: child.name});
+            $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+	  } else {   //focus selected object, no need for shift-click
+	    document.getElementById(anchor).style.backgroundColor = 'black';
+	    document.getElementById(anchor_top).style.visibility = 'hidden';
+	    slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+            viewer.setTransparency(0, {shape_name: child.name});
+            $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+	  }
+        });
+      } else if ((searchshapes.value !== "") && (/^\d+$/.test(searchshapes.value)))  {  // If strictly numeric, search by vertex number
+        searchindex = searchshapes.value;	  
+        pick(viewer.x, viewer.y, slider_backup, searchindex);	//viewer.x and viewer.y are irrelevant and overwritten
+
+	viewer.model.children.forEach(function(child, i) {
+          var anchor = "shape-" + i;
+          var anchor_top = "top-" + i;
+          if (child.name == picked_object.name) {
+            selected_object = "search";
+            window.location.hash = "#" + anchor;
+            document.getElementById(anchor).style.backgroundColor = "#1E8FFF";
+            document.getElementById(anchor_top).style.visibility = 'visible';
+            viewer.setTransparency(1, {shape_name: child.name});
+            $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+          } else {   //focus selected object, no need for shift-click
+            document.getElementById(anchor).style.backgroundColor = 'black';
+            document.getElementById(anchor_top).style.visibility = 'hidden';
+            slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+            viewer.setTransparency(0, {shape_name: child.name});
+            $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+	  }
+        });
+      searchshapes.value = picked_object.name;
+      }
+    focus_toggle = "on";
     });
 
     // If Search box "Clear" button pressed
     $("#clearsearch").click(function() {
       document.getElementById("searchshapes").value="";
+      viewer.model.children.forEach(function(child, i) {
+        var anchor = "shape-" + i;
+        var anchor_top = "top-" + i;
+	window.location.hash = "#shape-0";
+        window.location.hash = "#surface-choice";
+        document.getElementById(anchor).style.backgroundColor = 'black';
+        document.getElementById(anchor_top).style.visibility = 'hidden';
+        //slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+        viewer.setTransparency(1, {shape_name: child.name});
+        $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+      });
+    focus_toggle = "off";
+    searchshapes.value="";
+    searchindex = "";
     });
 
     // Set the visibility of the currently loaded model.
@@ -450,6 +529,7 @@ $(function() {
       var spectrum_canvas = document.getElementById("spectrum-canvas");
       var context = canvas.getContext("2d");
       var viewer_image = new Image();
+      var fileName;
       
       canvas.width = view_window.offsetWidth;
       canvas.height = view_window.offsetHeight;
@@ -465,7 +545,6 @@ $(function() {
             width: result_image.width
           });
         };
-        
         result_image.src = canvas.toDataURL();
       }
    
@@ -481,7 +560,7 @@ $(function() {
       }
       
       // Draw an image of the viewer area, add the spectrum
-      // image it its available, and display everything
+      // image if it's available, and display everything
       // in a dialog box.
       viewer_image.onload = function(){
         context.drawImage(viewer_image, 0, 0);
@@ -493,6 +572,24 @@ $(function() {
       };
       
       viewer_image.src = viewer.canvasDataURL();
+
+      var url = viewer_image.src.replace(/^data:image\/[^;]/, 'data:application/octet-stream');
+
+      saveAs(url, 'Screenshot.png');
+
+      function saveAs(uri, filename) {
+        var link = document.createElement('a');
+        if (typeof link.download === 'string') {
+          document.body.appendChild(link); //Firefox requires the link to be in the body
+          link.download = filename;
+          link.href = uri;
+          link.click();
+          document.body.removeChild(link); //remove the link when done
+        } else {
+          location.replace(uri);
+        }
+      }
+
     });
     
     // Control autorotation.
@@ -520,16 +617,16 @@ $(function() {
       viewer.model.children.forEach(function(child, i) {
         var anchor = "shape-" + i;
         var anchor_top = "top-" + i;
-        if (child.name.contains(picked_object.name)) {
+        if (child.name == picked_object.name) {
           window.location.hash = "#" + anchor;
-          document.getElementById(anchor).style.backgroundColor = 'blue';
+          document.getElementById(anchor).style.backgroundColor = '#1E8FFF';
           document.getElementById(anchor_top).style.visibility = 'visible';
         } else {   //focus selected object, no need for shift-click
           document.getElementById(anchor).style.backgroundColor = 'black';
           document.getElementById(anchor_top).style.visibility = 'hidden';
         }
       });
-
+      focus_toggle = "off";
     });
 
     $("#focus-shape").click(function(event) {
@@ -589,7 +686,6 @@ $(function() {
     $("#pick-value").change(function() {
       var index = parseInt($("#pick-index").html(), 10);
       var value = parseFloat(this.value);
-
       if (BrainBrowser.utils.isNumeric(index) && BrainBrowser.utils.isNumeric(value)) {
         viewer.setIntensity(index, value);
       }
@@ -663,8 +759,7 @@ $(function() {
 
       var annotation_display = $("#annotation-display");
       var media = $("#annotation-media");
-//      var pick_info = viewer.pick(x, y);
-      var pick_info = viewer.pick(x, y, slider_backup);
+      var pick_info = viewer.pick(x, y, slider_backup, searchindex);
       var model_data;
       var annotation_info;
       var value, label, text;
