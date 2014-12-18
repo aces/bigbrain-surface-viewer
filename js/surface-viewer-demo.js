@@ -52,13 +52,14 @@ $(function() {
   window.viewer = BrainBrowser.SurfaceViewer.start("brainbrowser", function(viewer) {
 
     var picked_object;
+    var picked_coords;
+    var picked_object_color;
     var atlas_labels = {};
     var autoshapes  = [];
-    var selected_object = "none";
+    var select_mode = "none";
     var focus_toggle = "off";
     var opacity_toggle_custom = "off";
     var opacity_toggle_onoff = "none";
-    var opacity_toggle_indiv_onoff = {};
     var slider_backup = {};
     var searchindex= "" ;
 
@@ -91,7 +92,7 @@ $(function() {
       }
     });
 
-    // When a new model is added to the viewer, create a transparancy slider
+    // When a new model is added to the viewer, create a transparency slider
     // for each shape that makes up the model.
     viewer.addEventListener("displaymodel", function(object) {
       var slider, slider_div, slider_div_end;
@@ -129,17 +130,14 @@ $(function() {
           slider_div.appendTo("#shapes");
 	  autoshapes[i]={};
 	  autoshapes[i].label = shape.name;
-          opacity_toggle_indiv_onoff[i] = "on";
           $("#individualtoggleopacity" + i).click(function() {
-	    if (opacity_toggle_indiv_onoff[i] == "on"){
+	    if ($(this).html() == "On"){
               viewer.setTransparency(0, {shape_name: shape.name});
               $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value", 0);
-	      opacity_toggle_indiv_onoff[i] = "off";
               $(this).html("Off");
 	    } else {
               viewer.setTransparency(1, {shape_name: shape.name});
               $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value", 100);
-              opacity_toggle_indiv_onoff[i] = "on";
               $(this).html("On");
 	    }
           });
@@ -172,7 +170,7 @@ $(function() {
     });
 
     // When new intensity data is loaded, create all UI related to
-    // controlling the relationship between the instensity data and
+    // controlling the relationship between the intensity data and
     // the color mapping (range, flip colors, clamp colors, fix range).
     viewer.addEventListener("loadintensitydata", function(intensity_data) {
       var container = $("#data-range");
@@ -187,6 +185,7 @@ $(function() {
         headers += '<li><a href="#data-file' + i + '">' + data_set[i].filename + '</a></li>';
         controls += '<div id="data-file' + i + '" class="box range-controls">';
         controls += 'Min: <input class="range-box" id="data-range-min" type="text" name="range-min" size="5" >';
+
         controls += '<div id="range-slider' + i + '" data-blend-index="' + i + '" class="slider"></div>';
         controls += 'Max: <input class="range-box" id="data-range-max" type="text" name="range-max" size="5">';
         controls += '<div style="margin-top: 10px">';
@@ -285,6 +284,7 @@ $(function() {
       });
 
       $("#paint-value").val(model_data.intensity_data.values[0]);
+
       $("#paint-color").css("background-color", "#" + viewer.color_map.colorFromValue(model_data.intensity_data.values[0], {
         format: "hex",
         min: model_data.intensity_data.range_min,
@@ -401,15 +401,17 @@ $(function() {
     // Toggle opacity (on vs. off).
     $("#toggleopacityonoff").click(function() {
 
-      viewer.model.children.forEach(function(child) {
+      viewer.model.children.forEach(function(child,i) {
 
         if (  opacity_toggle_onoff == "all") {
           slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
           viewer.setTransparency(1, {shape_name: child.name});
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+          $("#individualtoggleopacity" + i).html("On");
         } else {
           viewer.setTransparency(0, {shape_name: child.name});
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+          $("#individualtoggleopacity" + i).html("Off");
         }
       });
       if (  opacity_toggle_onoff == "all") {
@@ -423,25 +425,38 @@ $(function() {
 
     $("#gosearch").click(function() {
       if ((searchshapes.value !== "") && (!/^\d+$/.test(searchshapes.value))){  //Only do the following if string is not blank & contains some text (i.e. not strictly numeric)
+
+        $("#pick-name").html("");
+        $("#pick-shape-number").html("");
+        $("#pick-x").html("");
+        $("#pick-y").html("");
+        $("#pick-z").html("");
+        $("#pick-index").html("");
+
         viewer.model.children.forEach(function(child, i) {
 	  var anchor = "shape-" + i;
   	  var anchor_top = "top-" + i;
 	  if (child.name == searchshapes.value) {
-	    selected_object = "search";
+            searchindex = child.name;
+            $("#pick-shape-number").html(i+1);
+	    $("#pick-name").html(child.name);
        	    window.location.hash = "#" + anchor;
 	    document.getElementById(anchor).style.backgroundColor = "#1E8FFF";
 	    document.getElementById(anchor_top).style.visibility = 'visible';
             viewer.setTransparency(1, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+            $("#individualtoggleopacity" + i).html("On");
 	  } else {   //focus selected object, no need for shift-click
 	    document.getElementById(anchor).style.backgroundColor = 'black';
 	    document.getElementById(anchor_top).style.visibility = 'hidden';
 	    slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
             viewer.setTransparency(0, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+            $("#individualtoggleopacity" + i).html("Off");
 	  }
         });
       } else if ((searchshapes.value !== "") && (/^\d+$/.test(searchshapes.value)))  {  // If strictly numeric, search by vertex number
+
         searchindex = searchshapes.value;	  
         pick(viewer.x, viewer.y, slider_backup, searchindex);	//viewer.x and viewer.y are irrelevant and overwritten
 
@@ -449,23 +464,26 @@ $(function() {
           var anchor = "shape-" + i;
           var anchor_top = "top-" + i;
           if (child.name == picked_object.name) {
-            selected_object = "search";
             window.location.hash = "#" + anchor;
             document.getElementById(anchor).style.backgroundColor = "#1E8FFF";
             document.getElementById(anchor_top).style.visibility = 'visible';
             viewer.setTransparency(1, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+            $("#individualtoggleopacity" + i).html("On");
           } else {   //focus selected object, no need for shift-click
             document.getElementById(anchor).style.backgroundColor = 'black';
             document.getElementById(anchor_top).style.visibility = 'hidden';
             slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
             viewer.setTransparency(0, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+            $("#individualtoggleopacity" + i).html("Off");
 	  }
         });
-      searchshapes.value = picked_object.name;
+      searchindex = picked_object.name;
+//      viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
       }
     focus_toggle = "on";
+    select_mode = "search";
     });
 
     // If Search box "Clear" button pressed
@@ -478,7 +496,6 @@ $(function() {
         window.location.hash = "#surface-choice";
         document.getElementById(anchor).style.backgroundColor = 'black';
         document.getElementById(anchor_top).style.visibility = 'hidden';
-        //slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
         viewer.setTransparency(1, {shape_name: child.name});
         $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
       });
@@ -609,11 +626,12 @@ $(function() {
 
     $("#brainbrowser").click(function(event) {
       if (!event.shiftKey) return;
+      searchshapes.value = "";
+      searchindex="";
       viewer.model.children.forEach(function(child) {
       slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
 	});
       pick(viewer.mouse.x, viewer.mouse.y, event.ctrlKey);
-      selected_object = "click";
       viewer.model.children.forEach(function(child, i) {
         var anchor = "shape-" + i;
         var anchor_top = "top-" + i;
@@ -626,6 +644,7 @@ $(function() {
           document.getElementById(anchor_top).style.visibility = 'hidden';
         }
       });
+      select_mode = "click";
       focus_toggle = "off";
     });
 
@@ -633,31 +652,33 @@ $(function() {
 
       var name;
 
-	if (selected_object === "click"){ 
+	if (select_mode === "click"){ 
       	  name = $("#pick-name").html();
-	} else if (selected_object === "search"){
-      	  name = searchshapes.value;
+	} else if (select_mode === "search"){
+      	  name = searchindex;
 	} else {
 	  return;
 	}
 
 	if (focus_toggle == "off"){
-      	  viewer.model.children.forEach(function(child) {
+      	  viewer.model.children.forEach(function(child,i) {
 	    if (child.name !== name) {
               slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
 	      viewer.setTransparency(0, {shape_name: child.name});
               $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+	      $("#individualtoggleopacity" + i).html("Off");
             }
       	  });
 	focus_toggle = "on";
 	} else if (focus_toggle == "on"){
-          viewer.model.children.forEach(function(child) {
+          viewer.model.children.forEach(function(child,i) {
             if (child.name !== name) {
 
             var alpha = slider_backup[child.name] / 100;
 
             viewer.setTransparency(alpha, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
+              $("#individualtoggleopacity" + i).html("On");
             }
           });
         focus_toggle = "off";
@@ -773,6 +794,10 @@ $(function() {
         $("#pick-index").html(pick_info.index);
         $("#annotation-wrapper").show();
         picked_object = pick_info.object;
+        picked_coords = pick_info.point; 
+        if (pick_info.color){
+          picked_object_color = pick_info.color; 
+        }
         model_data = viewer.model_data.get(picked_object.model_name);
         if (model_data.intensity_data) {
           if (paint) {

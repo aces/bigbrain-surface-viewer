@@ -284,10 +284,12 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
  	  if (vertices[j] == searchindex){
 	    intersect_object = model_data.shapes[i];
             searchindex = parseInt(searchindex);
+	    var color = model_data.shapes[i].color;
             vertex_data = {
               index: searchindex,
               point: vector,
-              object: intersect_object
+              object: intersect_object,
+              color: color
             };
 	    break
 	  }
