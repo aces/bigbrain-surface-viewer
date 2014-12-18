@@ -222,7 +222,7 @@ BrainBrowser.SurfaceViewer.modules.color = function(viewer) {
       indices = shape.geometry.original_data.indices;
       color_attribute = geometry.attributes.color;
       colors = color_attribute.array;
-      
+
       // This looks a little messy but it's just going from an indexed color map
       // to an unindexed geometry.
       // And it's skipping the alphas (every 4th element).
