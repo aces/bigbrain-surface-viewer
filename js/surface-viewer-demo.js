@@ -59,7 +59,7 @@ $(function() {
     var select_mode = "none";
     var focus_toggle = "off";
     var opacity_toggle_custom = "off";
-    var opacity_toggle_onoff = "none";
+    var opacity_toggle_onoff = "on";
     var slider_backup = {};
     var searchindex= "" ;
 
@@ -107,8 +107,8 @@ $(function() {
             "<div style=\"clear: both;\">" +
             "Name: " + shape.name + "<br />" +
             "<p class=\"alignleft\"> Opacity: </p></div>");
-          slider = $("<div class=\"opacity-slider aligncenter slider\" data-shape-name=\"" + shape.name + "\">");
-	  slider_div_end = $("<div id=\"test\"><p class=\"alignright\"><a class=\"button\" id=\"individualtoggleopacity" +  i + "\">On</a></p></div>");
+          slider = $("<div id=\"opacity-slider" +  i +"\" class=\"opacity-slider aligncenter slider\" data-shape-name=\"" + shape.name + "\">");
+	  slider_div_end = $("<p class=\"alignright\"><a class=\"button\" id=\"individualtoggleopacity" +  i + "\">On</a></p>");
           slider.slider({
             value: 100,
             min: -1,
@@ -132,13 +132,17 @@ $(function() {
 	  autoshapes[i].label = shape.name;
           $("#individualtoggleopacity" + i).click(function() {
 	    if ($(this).html() == "On"){
+	      slider_backup[shape.name] = $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value");
               viewer.setTransparency(0, {shape_name: shape.name});
               $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value", 0);
               $(this).html("Off");
+	      document.getElementById("opacity-slider" + i).style.visibility = "hidden";
 	    } else {
-              viewer.setTransparency(1, {shape_name: shape.name});
-              $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value", 100);
+              var alpha = slider_backup[shape.name] / 100;
+              viewer.setTransparency(alpha, {shape_name: shape.name});
+              $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value", slider_backup[shape.name]);
               $(this).html("On");
+              document.getElementById("opacity-slider" + i).style.visibility = "visible";
 	    }
           });
         });
@@ -379,51 +383,58 @@ $(function() {
     // Toggle opacity (custom vs. on).
     $("#toggleopacitycustom").click(function() {
 
-      viewer.model.children.forEach(function(child) {
-
-        if (  opacity_toggle_custom == "off") {
-          slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
-          viewer.setTransparency(1, {shape_name: child.name});
-          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
-        } else {
+      if (  opacity_toggle_custom == "on") {
+        viewer.model.children.forEach(function(child,i) {
           var alpha = slider_backup[child.name] / 100;
           viewer.setTransparency(alpha, {shape_name: child.name});
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
-	}
-      });
-      if (  opacity_toggle_custom == "off") {
+          $("#individualtoggleopacity" + i).html("On");
+          document.getElementById("opacity-slider" + i).style.visibility = "visible";
+	});
+	opacity_toggle_custom = "off";
+        } else {
+        viewer.model.children.forEach(function(child,i) {
+          slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+          viewer.setTransparency(0, {shape_name: child.name});
+          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+          $("#individualtoggleopacity" + i).html("Off");
+          document.getElementById("opacity-slider" + i).style.visibility = "hidden";
+        });
 	opacity_toggle_custom = "on";
-      } else {
-        opacity_toggle_custom = "off";
       }
     });
 
     // Toggle opacity (on vs. off).
     $("#toggleopacityonoff").click(function() {
 
-      viewer.model.children.forEach(function(child,i) {
-
-        if (  opacity_toggle_onoff == "all") {
-          slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+      if (  opacity_toggle_onoff == "off"){
+        viewer.model.children.forEach(function(child,i) {
           viewer.setTransparency(1, {shape_name: child.name});
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
           $("#individualtoggleopacity" + i).html("On");
-        } else {
+          document.getElementById("opacity-slider" + i).style.visibility = "visible";
+        });
+        opacity_toggle_onoff = "on";
+      } else {
+        viewer.model.children.forEach(function(child,i) {
           viewer.setTransparency(0, {shape_name: child.name});
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
           $("#individualtoggleopacity" + i).html("Off");
-        }
-      });
-      if (  opacity_toggle_onoff == "all") {
-        opacity_toggle_onoff = "none";
-      } else {
-        opacity_toggle_onoff = "all";
+          document.getElementById("opacity-slider" + i).style.visibility = "hidden";
+	});
+	opacity_toggle_onoff = "off";
       }
     });
 
     // If Search box "Go" button pressed
 
     $("#gosearch").click(function() {
+
+      if (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+        viewer.model.children[viewer.model.children.length-1].visible = false;
+        viewer.model.children.pop();
+      }
+
       if ((searchshapes.value !== "") && (!/^\d+$/.test(searchshapes.value))){  //Only do the following if string is not blank & contains some text (i.e. not strictly numeric)
 
         $("#pick-name").html("");
@@ -442,13 +453,13 @@ $(function() {
 	    $("#pick-name").html(child.name);
        	    window.location.hash = "#" + anchor;
 	    document.getElementById(anchor).style.backgroundColor = "#1E8FFF";
-	    document.getElementById(anchor_top).style.visibility = 'visible';
+	    document.getElementById(anchor_top).style.visibility = "visible";
             viewer.setTransparency(1, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
             $("#individualtoggleopacity" + i).html("On");
 	  } else {   //focus selected object, no need for shift-click
-	    document.getElementById(anchor).style.backgroundColor = 'black';
-	    document.getElementById(anchor_top).style.visibility = 'hidden';
+	    document.getElementById(anchor).style.backgroundColor = "black";
+	    document.getElementById(anchor_top).style.visibility = "hidden";
 	    slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
             viewer.setTransparency(0, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
@@ -466,13 +477,13 @@ $(function() {
           if (child.name == picked_object.name) {
             window.location.hash = "#" + anchor;
             document.getElementById(anchor).style.backgroundColor = "#1E8FFF";
-            document.getElementById(anchor_top).style.visibility = 'visible';
+            document.getElementById(anchor_top).style.visibility = "visible";
             viewer.setTransparency(1, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
             $("#individualtoggleopacity" + i).html("On");
           } else {   //focus selected object, no need for shift-click
-            document.getElementById(anchor).style.backgroundColor = 'black';
-            document.getElementById(anchor_top).style.visibility = 'hidden';
+            document.getElementById(anchor).style.backgroundColor = "black";
+            document.getElementById(anchor_top).style.visibility = "hidden";
             slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
             viewer.setTransparency(0, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
@@ -480,7 +491,7 @@ $(function() {
 	  }
         });
       searchindex = picked_object.name;
-//      viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+      viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
       }
     focus_toggle = "on";
     select_mode = "search";
@@ -494,8 +505,8 @@ $(function() {
         var anchor_top = "top-" + i;
 	window.location.hash = "#shape-0";
         window.location.hash = "#surface-choice";
-        document.getElementById(anchor).style.backgroundColor = 'black';
-        document.getElementById(anchor_top).style.visibility = 'hidden';
+        document.getElementById(anchor).style.backgroundColor = "black";
+        document.getElementById(anchor_top).style.visibility = "hidden";
         viewer.setTransparency(1, {shape_name: child.name});
         $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
       });
@@ -628,28 +639,36 @@ $(function() {
       if (!event.shiftKey) return;
       searchshapes.value = "";
       searchindex="";
+
+      if (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+        viewer.model.children[viewer.model.children.length-1].visible = false;
+        viewer.model.children.pop();
+      }
+
       viewer.model.children.forEach(function(child) {
       slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
 	});
+
       pick(viewer.mouse.x, viewer.mouse.y, event.ctrlKey);
+
       viewer.model.children.forEach(function(child, i) {
         var anchor = "shape-" + i;
         var anchor_top = "top-" + i;
         if (child.name == picked_object.name) {
           window.location.hash = "#" + anchor;
-          document.getElementById(anchor).style.backgroundColor = '#1E8FFF';
-          document.getElementById(anchor_top).style.visibility = 'visible';
+          document.getElementById(anchor).style.backgroundColor = "#1E8FFF";
+          document.getElementById(anchor_top).style.visibility = "visible";
         } else {   //focus selected object, no need for shift-click
-          document.getElementById(anchor).style.backgroundColor = 'black';
-          document.getElementById(anchor_top).style.visibility = 'hidden';
+          document.getElementById(anchor).style.backgroundColor = "black";
+          document.getElementById(anchor_top).style.visibility = "hidden";
         }
       });
+      var sphere = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
       select_mode = "click";
       focus_toggle = "off";
     });
 
     $("#focus-shape").click(function(event) {
-
       var name;
 
 	if (select_mode === "click"){ 
@@ -662,7 +681,7 @@ $(function() {
 
 	if (focus_toggle == "off"){
       	  viewer.model.children.forEach(function(child,i) {
-	    if (child.name !== name) {
+	    if ((child.name !== name) && (i < ($("#shapes").children().length))) {
               slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
 	      viewer.setTransparency(0, {shape_name: child.name});
               $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
@@ -672,7 +691,7 @@ $(function() {
 	focus_toggle = "on";
 	} else if (focus_toggle == "on"){
           viewer.model.children.forEach(function(child,i) {
-            if (child.name !== name) {
+            if ((child.name !== name) && (i < ($("#shapes").children().length))){
 
             var alpha = slider_backup[child.name] / 100;
 
