@@ -62,6 +62,7 @@ $(function() {
     var opacity_toggle_onoff = "on";
     var slider_backup = {};
     var searchindex= "" ;
+    var marker = "";
 
     // Add the three.js 3D anaglyph effect to the viewer.
     viewer.addEffect("AnaglyphEffect");
@@ -371,17 +372,30 @@ $(function() {
     
     // Reset to the default view.
     $("#resetview").click(function() {
+
+      while (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+        viewer.model.children[viewer.model.children.length-1].visible = false;
+        viewer.model.children.pop();
+      }
+
       // Setting the view to its current view type will
       // automatically reset its position and opacity is reset to 100% for all shapes.
       viewer.setView($("[name=hem-view]:checked").val());
-        viewer.model.children.forEach(function(child) {
-          viewer.setTransparency(1, {shape_name: child.name});
-          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
-        });
+      viewer.model.children.forEach(function(child) {
+        viewer.setTransparency(1, {shape_name: child.name});
+        $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+      });
+      $("#individualtoggleopacity" + i).html("On");
+      document.getElementById("opacity-slider" + i).style.visibility = "visible";
     });
 
     // Toggle opacity (custom vs. on).
     $("#toggleopacitycustom").click(function() {
+
+      while (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+        viewer.model.children[viewer.model.children.length-1].visible = false;
+        viewer.model.children.pop();
+      }
 
       if (  opacity_toggle_custom == "on") {
         viewer.model.children.forEach(function(child,i) {
@@ -390,7 +404,10 @@ $(function() {
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
           $("#individualtoggleopacity" + i).html("On");
           document.getElementById("opacity-slider" + i).style.visibility = "visible";
-	});
+	}); 
+        if (marker !== ""){
+          marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+        }
 	opacity_toggle_custom = "off";
         } else {
         viewer.model.children.forEach(function(child,i) {
@@ -407,6 +424,11 @@ $(function() {
     // Toggle opacity (on vs. off).
     $("#toggleopacityonoff").click(function() {
 
+      while (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+        viewer.model.children[viewer.model.children.length-1].visible = false;
+        viewer.model.children.pop();
+      }
+
       if (  opacity_toggle_onoff == "off"){
         viewer.model.children.forEach(function(child,i) {
           viewer.setTransparency(1, {shape_name: child.name});
@@ -414,6 +436,9 @@ $(function() {
           $("#individualtoggleopacity" + i).html("On");
           document.getElementById("opacity-slider" + i).style.visibility = "visible";
         });
+        if (marker !== ""){
+          marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+        }
         opacity_toggle_onoff = "on";
       } else {
         viewer.model.children.forEach(function(child,i) {
@@ -430,7 +455,7 @@ $(function() {
 
     $("#gosearch").click(function() {
 
-      if (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+      while (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
         viewer.model.children[viewer.model.children.length-1].visible = false;
         viewer.model.children.pop();
       }
@@ -491,7 +516,7 @@ $(function() {
 	  }
         });
       searchindex = picked_object.name;
-      viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+      marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
       }
     focus_toggle = "on";
     select_mode = "search";
@@ -640,7 +665,7 @@ $(function() {
       searchshapes.value = "";
       searchindex="";
 
-      if (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+      while (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
         viewer.model.children[viewer.model.children.length-1].visible = false;
         viewer.model.children.pop();
       }
@@ -663,7 +688,7 @@ $(function() {
           document.getElementById(anchor_top).style.visibility = "hidden";
         }
       });
-      var sphere = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+      var marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
       select_mode = "click";
       focus_toggle = "off";
     });
