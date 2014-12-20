@@ -688,7 +688,7 @@ $(function() {
           document.getElementById(anchor_top).style.visibility = "hidden";
         }
       });
-      var marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+      marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
       select_mode = "click";
       focus_toggle = "off";
     });
