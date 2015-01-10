@@ -358,7 +358,7 @@ BrainBrowser.VolumeViewer.modules.loading = function(viewer) {
     } else {
       error_message = "Unsuported Volume Type";
 
-      BrainBrowser.events.triggerEvent("error", error_message);
+      BrainBrowser.events.triggerEvent("error", { message: error_message });
       throw new Error(error_message);
     }
   }
@@ -389,7 +389,9 @@ BrainBrowser.VolumeViewer.modules.loading = function(viewer) {
       volume.display.forEach(function(panel) {
         panel.updateSlice(function() {
           if (++slices_loaded === views.length) {
-            viewer.triggerEvent("volumeloaded", volume);
+            viewer.triggerEvent("volumeloaded", {
+              volume: volume
+            });
             if (BrainBrowser.utils.isFunction(callback)) {
               callback(volume);
             }
@@ -473,10 +475,6 @@ BrainBrowser.VolumeViewer.modules.loading = function(viewer) {
           volume_id: vol_id,
           axis: axis_name,
           canvas: canvas,
-          cursor: {
-            x: canvas.width / 2,
-            y: canvas.height / 2
-          },
           image_center: {
             x: canvas.width / 2,
             y: canvas.height / 2
@@ -632,12 +630,14 @@ BrainBrowser.VolumeViewer.modules.loading = function(viewer) {
           current_target = null;
         }
 
-        function touchZoom() {
+        function touchZoom(event) {
           var dx = panel.touches[0].x - panel.touches[1].x;
           var dy = panel.touches[0].y - panel.touches[1].y;
 
           var distance = Math.sqrt(dx * dx + dy * dy);
           var delta;
+
+          event.preventDefault();
 
           if (last_touch_distance !== null) {
             delta = distance - last_touch_distance;
@@ -698,12 +698,12 @@ BrainBrowser.VolumeViewer.modules.loading = function(viewer) {
         }, false);
         
         function wheelHandler(event) {
+          event.preventDefault();
+
           zoom(Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail))));
         }
 
         function zoom(delta) {
-          event.preventDefault();
-
           panel.zoom = Math.max(panel.zoom + delta * 0.05, 0.05);
           panel.updateVolumePosition();
           panel.updateSlice();
@@ -727,7 +727,11 @@ BrainBrowser.VolumeViewer.modules.loading = function(viewer) {
     })();
 
     dom_element.appendChild(container);
-    viewer.triggerEvent("volumeuiloaded", container, volume, vol_id);
+    viewer.triggerEvent("volumeuiloaded", {
+      container: container,
+      volume: volume,
+      volume_id: vol_id
+    });
 
     return display;
   }

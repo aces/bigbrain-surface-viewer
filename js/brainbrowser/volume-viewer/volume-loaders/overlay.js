@@ -43,8 +43,8 @@
       type: "overlay",
       position: {},
       header: volumes[0] ? volumes[0].header : {},
-      min: 0,
-      max: 255,
+      intensity_min: 0,
+      intensity_max: 255,
       volumes: [],
       blend_ratios: [],
       slice: function(axis, slice_num, time) {
@@ -62,71 +62,66 @@
         return {
           height_space: slices[0].height_space,
           width_space: slices[0].width_space,
-          getImage: function(zoom, contrast, brightness) {
-            zoom = zoom || 1;
-            
-            var images = [];
-            var max_width = 0;
-            var max_height = 0;
-
-            slices.forEach(function(slice) {
-              var color_map = slice.color_map;
-              var error_message;
-
-              if (!color_map) {
-                error_message = "No color map set for this volume. Cannot render slice.";
-                overlay_volume.triggerEvent("error", error_message);
-                throw new Error(error_message);
-              }
-
-              var xstep = slice.width_space.step;
-              var ystep = slice.height_space.step;
-              var target_width = Math.abs(Math.floor(slice.width * xstep * zoom));
-              var target_height = Math.abs(Math.floor(slice.height * ystep * zoom));
-              var source_image = image_creation_context.createImageData(slice.width, slice.height);
-              var target_image = image_creation_context.createImageData(target_width, target_height);
-              
-
-              color_map.mapColors(slice.data, {
-                min: slice.min,
-                max: slice.max,
-                contrast: contrast,
-                brightness: brightness,
-                destination: source_image.data
-              });
-
-              if (xstep < 0 && ystep > 0) {
-                source_image.data.set(
-                  VolumeViewer.utils.flipImage(source_image.data, source_image.width, source_image.height, {
-                    flipx: true,
-                    flipy: false,
-                    block_size: 4
-                  })
-                );
-              }
-              
-              target_image.data.set(VolumeViewer.utils.nearestNeighbor(
-                source_image.data,
-                source_image.width,
-                source_image.height,
-                target_width,
-                target_height,
-                {block_size: 4}
-              ));
-
-              max_width = Math.max(max_width, target_width);
-              max_height = Math.max(max_height, target_height);
-              
-              images.push(target_image);
-            });
-           
-            return blendImages(
-              images,
-              overlay_volume.blend_ratios,
-              image_creation_context.createImageData(max_width, max_height)
-            );
-          }
+          slices: slices
         };
+      },
+
+      getSliceImage: function(slice, zoom, contrast, brightness) {
+        zoom = zoom || 1;
+        
+        var slices = slice.slices;
+        var images = [];
+        var max_width = 0;
+        var max_height = 0;
+
+        slices.forEach(function(slice, i) {
+          var volume = overlay_volume.volumes[i];
+          var color_map = volume.color_map;
+          var intensity_min = volume.intensity_min;
+          var intensity_max = volume.intensity_max;
+          var error_message;
+
+          if (!color_map) {
+            error_message = "No color map set for this volume. Cannot render slice.";
+            overlay_volume.triggerEvent("error", { message: error_message });
+            throw new Error(error_message);
+          }
+
+          var xstep = slice.width_space.step;
+          var ystep = slice.height_space.step;
+          var target_width = Math.abs(Math.floor(slice.width * xstep * zoom));
+          var target_height = Math.abs(Math.floor(slice.height * ystep * zoom));
+          var source_image = image_creation_context.createImageData(slice.width, slice.height);
+          var target_image = image_creation_context.createImageData(target_width, target_height);
+
+          color_map.mapColors(slice.data, {
+            min: intensity_min,
+            max: intensity_max,
+            contrast: contrast,
+            brightness: brightness,
+            destination: source_image.data
+          });
+          
+          target_image.data.set(VolumeViewer.utils.nearestNeighbor(
+            source_image.data,
+            source_image.width,
+            source_image.height,
+            target_width,
+            target_height,
+            {block_size: 4}
+          ));
+
+          max_width = Math.max(max_width, target_width);
+          max_height = Math.max(max_height, target_height);
+          
+          images.push(target_image);
+        });
+        
+        return blendImages(
+          images,
+          overlay_volume.blend_ratios,
+          image_creation_context.createImageData(max_width, max_height)
+        );
       },
 
       getIntensityValue: function(x, y, z, time) {
@@ -139,13 +134,15 @@
         var values = [];
 
         overlay_volume.volumes.forEach(function(volume) {
-          if (x < 0 || x > volume.data.xspace.space_length ||
-            y < 0 || y > volume.data.yspace.space_length ||
-            z < 0 || z > volume.data.zspace.space_length) {
+          var header = volume.header;
+
+          if (x < 0 || x > header.xspace.space_length ||
+            y < 0 || y > header.yspace.space_length ||
+            z < 0 || z > header.zspace.space_length) {
             values.push(0);
           }
 
-          var slice = volume.data.slice("zspace", z, time);
+          var slice = volume.slice("zspace", z, time);
           var data = slice.data;
           var slice_x, slice_y;
 
@@ -239,4 +236,5 @@
   }
 
 }());
+
 

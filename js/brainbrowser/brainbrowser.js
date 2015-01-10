@@ -32,6 +32,14 @@
 * The main BrainBrowser namespace. Contains:
 *
 *  * **version**: the version of the current instance of BrainBrowser.
+*  * **CANVAS_ENABLED** Indicates whether the HTML5 canvas is
+*    available in the current browser.
+*  * **WEB\_WORKERS_ENABLED** Indicates whether Web Workers are
+*    available in the current browser.
+*  * **WEBGL_ENABLED** Indicates whether WebGL is available
+*    in the current browser.
+*  * **WEBGL\_UINT\_INDEX\_ENABLED** Indicates whether the WebGL
+*    OES_element_index_uint extension is available in the current browser.
 *  * **utils**: general utilities for all applications.
 *  * **events**: event handler functions.
 *  * **createColorMap**: a factory function for creating color map objects.
@@ -73,6 +81,14 @@
 * @doc object
 * @name BrainBrowser
 * @property {string} version The current version of BrainBrowser.
+* @property {boolean} CANVAS_ENABLED Indicates whether the HTML5 canvas is
+* available in the current browser.
+* @property {boolean} WEB_WORKERS_ENABLED Indicates whether Web Workers are
+* available in the current browser.
+* @property {boolean} WEBGL_ENABLED Indicates whether WebGL is available
+* in the current browser.
+* @property {boolean} WEBGL_UINT_INDEX_ENABLED Indicates whether the WebGL 
+* OES\_element\_index\_uint extension is available in the current browser.
 * @property {object} utils General utilities for all applications.
 * @property {object} events Event handler functions.
 * @property {function} createColorMap A factory function for creating color map objects.
@@ -90,9 +106,11 @@
   var version = "<%= BRAINBROWSER_VERSION %>";
   version = version.indexOf("BRAINBROWSER_VERSION") > 0 ? "D.E.V" : version;
 
-  window.BrainBrowser = {
+  var BrainBrowser = window.BrainBrowser = {
     version: version
   };
+
+  checkBrowser(BrainBrowser);
 
   // Shims for requestAnimationFrame (mainly for old Safari)
   window.requestAnimationFrame = window.requestAnimationFrame ||
@@ -109,6 +127,38 @@
       window.clearTimeout(id);
     };
 
+  // Check capabilities of the browser.
+  function checkBrowser(BrainBrowser) {
+    var CANVAS_ENABLED = false;
+    var WEB_WORKERS_ENABLED = false;
+    var WEBGL_ENABLED = false;
+    var WEBGL_UINT_INDEX_ENABLED = false;
+    var canvas = document.createElement("canvas");
+    var gl = null;
+
+    CANVAS_ENABLED = !!canvas;
+    WEB_WORKERS_ENABLED = !!window.Worker;
+
+    try {
+      if(canvas && window.WebGLRenderingContext) {
+        gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+      }
+      WEBGL_ENABLED = !!gl;
+    } catch(e) {
+      WEBGL_ENABLED = false;
+    }
+
+    if (WEBGL_ENABLED) {
+      WEBGL_UINT_INDEX_ENABLED = !!gl.getExtension("OES_element_index_uint");
+    }
+
+    BrainBrowser.CANVAS_ENABLED = CANVAS_ENABLED;
+    BrainBrowser.WEB_WORKERS_ENABLED = WEB_WORKERS_ENABLED;
+    BrainBrowser.WEBGL_ENABLED = WEBGL_ENABLED;
+    BrainBrowser.WEBGL_UINT_INDEX_ENABLED = WEBGL_UINT_INDEX_ENABLED;
+  }
+
 })();
+
 
 

@@ -32,25 +32,48 @@
     var shapes = data.shapes;
     var verts = data.vertices;
     var norms = data.normals;
-    var colors = data.colors || [0.7, 0.7, 0.7, 1.0];
+    var colors = data.colors;
+    var transfer = [verts.buffer];
     var i, count;
     var shape, unindexed;
 
     for (i = 0, count = shapes.length; i < count; i++) {
       shape = shapes[i];
-      unindexed = deindex(shapes[i].indices, verts, norms, shape.color || colors);
+      unindexed = deindex(shape.indices, verts, norms, shape.color || colors);
       shape.centroid = unindexed.centroid;
       shape.unindexed = unindexed.unindexed;
+
+      transfer.push(shape.indices.buffer);
+
+      transfer.push(shape.unindexed.position.buffer);
+
+      if (shape.unindexed.normal) {
+        transfer.push(shape.unindexed.normal.buffer);
+      }
+
+      if (shape.unindexed.color) {
+        transfer.push(shape.unindexed.color.buffer);
+      }
     }
 
-    self.postMessage(data);
+    if (norms) {
+      transfer.push(norms.buffer);
+    }
+
+    if (colors) {
+      transfer.push(colors.buffer);
+    }
+
+    data.deindexed = true;
+
+    self.postMessage(data, transfer);
   });
   
   function deindex(indices, verts, norms, colors) {
     indices = indices || [];
     verts = verts || [];
     norms = norms || [];
-    colors = colors || [0.7, 0.7, 0.7, 1.0];
+    colors = colors;
 
     var num_vertices = indices.length; // number of unindexed vertices.
     var num_coords = num_vertices * 3;
@@ -74,7 +97,7 @@
     }
 
     var unindexed_positions = new Float32Array(num_coords);
-    var unindexed_normals = normals_given ?  new Float32Array(num_coords) : new Float32Array();
+    var unindexed_normals = normals_given ?  new Float32Array(num_coords) : null;
     var unindexed_colors = new Float32Array(num_color_coords);
 
     // Calculate center so positions of objects relative to each other can
@@ -82,10 +105,9 @@
     for(i = 0, count = indices.length; i < count; i++) {
       boundingBoxUpdate(bounding_box, verts[indices[i] * 3], verts[indices[i] * 3 + 1], verts[indices[i] * 3 + 2]);
     }
-    centroid.x = bounding_box.minX + (bounding_box.maxX - bounding_box.minX) / 2;
-    centroid.y = bounding_box.minY + (bounding_box.maxY - bounding_box.minY) / 2;
-    centroid.z = bounding_box.minZ + (bounding_box.maxZ - bounding_box.minZ) / 2;
-    centroid.bounding_box = bounding_box;
+    centroid.x = bounding_box.min_x + (bounding_box.max_x - bounding_box.min_x) / 2;
+    centroid.y = bounding_box.min_y + (bounding_box.max_y - bounding_box.min_y) / 2;
+    centroid.z = bounding_box.min_z + (bounding_box.max_z - bounding_box.min_z) / 2;
 
     // "Unravel" the vertex and normal arrays so we don't have to use indices
     // (Avoids WebGL's 16 bit limit on indices)
@@ -93,15 +115,15 @@
       iv = i * 3;
       ic = i * 4;
 
-      unindexed_positions[iv]     = verts[indices[i] * 3] - centroid.x;
-      unindexed_positions[iv + 1] = verts[indices[i] * 3 + 1] - centroid.y;
-      unindexed_positions[iv + 2] = verts[indices[i] * 3 + 2] - centroid.z;
-      unindexed_positions[iv + 3] = verts[indices[i+1] * 3] - centroid.x;
-      unindexed_positions[iv + 4] = verts[indices[i+1] * 3 + 1] - centroid.y;
-      unindexed_positions[iv + 5] = verts[indices[i+1] * 3 + 2] - centroid.z;
-      unindexed_positions[iv + 6] = verts[indices[i+2] * 3] - centroid.x;
-      unindexed_positions[iv + 7] = verts[indices[i+2] * 3 + 1] - centroid.y;
-      unindexed_positions[iv + 8] = verts[indices[i+2] * 3 + 2] - centroid.z;
+      unindexed_positions[iv]     = verts[indices[i] * 3];
+      unindexed_positions[iv + 1] = verts[indices[i] * 3 + 1];
+      unindexed_positions[iv + 2] = verts[indices[i] * 3 + 2];
+      unindexed_positions[iv + 3] = verts[indices[i+1] * 3];
+      unindexed_positions[iv + 4] = verts[indices[i+1] * 3 + 1];
+      unindexed_positions[iv + 5] = verts[indices[i+1] * 3 + 2];
+      unindexed_positions[iv + 6] = verts[indices[i+2] * 3];
+      unindexed_positions[iv + 7] = verts[indices[i+2] * 3 + 1];
+      unindexed_positions[iv + 8] = verts[indices[i+2] * 3 + 2];
 
       if (normals_given) {
         unindexed_normals[iv]     = norms[indices[i] * 3];
@@ -146,6 +168,7 @@
 
     result =  {
       centroid: centroid,
+      bounding_box: bounding_box,
       unindexed : {
         position: unindexed_positions,
         normal: unindexed_normals,
@@ -159,27 +182,28 @@
   // Update current values of the bounding box of
   // an object.
   function boundingBoxUpdate(box, x, y, z) {
-    if (!box.minX || box.minX > x) {
-      box.minX = x;
+    if (!box.min_x || box.min_x > x) {
+      box.min_x = x;
     }
-    if (!box.maxX || box.maxX < x) {
-      box.maxX = x;
+    if (!box.max_x || box.max_x < x) {
+      box.max_x = x;
     }
-    if (!box.minY || box.minY > y) {
-      box.minY = y;
+    if (!box.min_y || box.min_y > y) {
+      box.min_y = y;
     }
-    if (!box.maxY || box.maxY < y) {
-      box.maxY = y;
+    if (!box.max_y || box.max_y < y) {
+      box.max_y = y;
     }
-    if (!box.minZ || box.minZ > z) {
-      box.minZ = z;
+    if (!box.min_z || box.min_z > z) {
+      box.min_z = z;
     }
-    if (!box.maxZ || box.maxZ < z) {
-      box.maxZ = z;
+    if (!box.max_z || box.max_z < z) {
+      box.max_z = z;
     }
   }
 
 
 })();
+
 
 
