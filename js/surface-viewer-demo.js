@@ -384,6 +384,7 @@ $(function() {
     // Reset to the default view.
     $("#resetview").click(function() {
 
+<<<<<<< HEAD
       clearMarker();
 
       // Setting the view to its current view type will
@@ -399,12 +400,35 @@ $(function() {
       });
       window.location.hash = "#shape-0";
       window.location.hash = "#surface-choice";
+=======
+      while (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+        viewer.model.children[viewer.model.children.length-1].visible = false;
+        viewer.model.children.pop();
+      }
+
+      // Setting the view to its current view type will
+      // automatically reset its position and opacity is reset to 100% for all shapes.
+      viewer.setView($("[name=hem-view]:checked").val());
+      viewer.model.children.forEach(function(child) {
+        viewer.setTransparency(1, {shape_name: child.name});
+        $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+      });
+      $("#individualtoggleopacity" + i).html("On");
+      document.getElementById("opacity-slider" + i).style.visibility = "visible";
+>>>>>>> fb64922281fc797fc40df16bf5a38d43ae4730c3
     });
 
     // Toggle opacity (custom vs. on).
     $("#toggleopacitycustom").click(function() {
 
+<<<<<<< HEAD
       clearMarker();
+=======
+      while (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+        viewer.model.children[viewer.model.children.length-1].visible = false;
+        viewer.model.children.pop();
+      }
+>>>>>>> fb64922281fc797fc40df16bf5a38d43ae4730c3
 
       if (  opacity_toggle_custom == "on") {
         viewer.model.children.forEach(function(child,i) {
@@ -416,8 +440,11 @@ $(function() {
 	}); 
         if (marker !== ""){
           marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+<<<<<<< HEAD
           marker.name = "marker";
           viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+=======
+>>>>>>> fb64922281fc797fc40df16bf5a38d43ae4730c3
         }
 	opacity_toggle_custom = "off";
         } else {
@@ -435,7 +462,14 @@ $(function() {
     // Toggle opacity (on vs. off).
     $("#toggleopacityonoff").click(function() {
 
+<<<<<<< HEAD
       clearMarker();
+=======
+      while (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+        viewer.model.children[viewer.model.children.length-1].visible = false;
+        viewer.model.children.pop();
+      }
+>>>>>>> fb64922281fc797fc40df16bf5a38d43ae4730c3
 
       if (  opacity_toggle_onoff == "off"){
         viewer.model.children.forEach(function(child,i) {
@@ -446,8 +480,11 @@ $(function() {
         });
         if (marker !== ""){
           marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+<<<<<<< HEAD
           marker.name = "marker";
           viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+=======
+>>>>>>> fb64922281fc797fc40df16bf5a38d43ae4730c3
         }
         opacity_toggle_onoff = "on";
       } else {
@@ -465,7 +502,14 @@ $(function() {
 
     $("#gosearch").click(function() {
 
+<<<<<<< HEAD
       clearMarker();
+=======
+      while (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+        viewer.model.children[viewer.model.children.length-1].visible = false;
+        viewer.model.children.pop();
+      }
+>>>>>>> fb64922281fc797fc40df16bf5a38d43ae4730c3
 
       if ((searchshapes.value !== "") && (!/^\d+$/.test(searchshapes.value))){  //Only do the following if string is not blank & contains some text (i.e. not strictly numeric)
 
@@ -521,8 +565,11 @@ $(function() {
         });
       searchindex = picked_object.name;
       marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+<<<<<<< HEAD
 //      marker.name = "marker";
 //      viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+=======
+>>>>>>> fb64922281fc797fc40df16bf5a38d43ae4730c3
       }
     focus_toggle = "on";
     select_mode = "search";
@@ -682,13 +729,21 @@ $(function() {
       searchshapes.value = "";
       searchindex = "";
 
+<<<<<<< HEAD
       clearMarker();
+=======
+      while (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+        viewer.model.children[viewer.model.children.length-1].visible = false;
+        viewer.model.children.pop();
+      }
+>>>>>>> fb64922281fc797fc40df16bf5a38d43ae4730c3
 
       viewer.model.children.forEach(function(child) {
       slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
 	});
 
       pick(viewer.mouse.x, viewer.mouse.y, event.ctrlKey);
+<<<<<<< HEAD
       if (picked_object === null) {
         return;
       } else {
@@ -708,6 +763,24 @@ $(function() {
         select_mode = "click";
         focus_toggle = "off";
       }
+=======
+
+      viewer.model.children.forEach(function(child, i) {
+        var anchor = "shape-" + i;
+        var anchor_top = "top-" + i;
+        if (child.name == picked_object.name) {
+          window.location.hash = "#" + anchor;
+          document.getElementById(anchor).style.backgroundColor = "#1E8FFF";
+          document.getElementById(anchor_top).style.visibility = "visible";
+        } else {   //focus selected object, no need for shift-click
+          document.getElementById(anchor).style.backgroundColor = "black";
+          document.getElementById(anchor_top).style.visibility = "hidden";
+        }
+      });
+      marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+      select_mode = "click";
+      focus_toggle = "off";
+>>>>>>> fb64922281fc797fc40df16bf5a38d43ae4730c3
     });
 
     $("#focus-shape").click(function(event) {
