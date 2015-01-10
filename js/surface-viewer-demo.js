@@ -2,7 +2,9 @@
 * BrainBrowser: Web-based Neurological Visualization Tools
 * (https://brainbrowser.cbrain.mcgill.ca)
 *
-* Copyright (C) 2011 McGill University
+* Copyright (C) 2011 
+* The Royal Institution for the Advancement of Learning
+* McGill University
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License as
@@ -29,6 +31,8 @@
 $(function() {
   "use strict";
 
+  var THREE = BrainBrowser.SurfaceViewer.THREE;
+
   // Request variables used to cancel the current request
   // if another request is started.
   var current_request = 0;
@@ -39,9 +43,8 @@ $(function() {
   function showLoading() { loading_div.show(); }
   function hideLoading() { loading_div.hide(); }
   
-
   // Make sure WebGL is available.
-  if (!BrainBrowser.utils.webglEnabled()) {
+  if (!BrainBrowser.WEBGL_ENABLED) {
     $("#brainbrowser").html(BrainBrowser.utils.webGLErrorMessage());
     return;
   }
@@ -51,9 +54,8 @@ $(function() {
   /////////////////////////////////////
   window.viewer = BrainBrowser.SurfaceViewer.start("brainbrowser", function(viewer) {
 
-    var picked_object;
+    var picked_object = null;
     var picked_coords;
-    var picked_object_color;
     var atlas_labels = {};
     var autoshapes  = [];
     var select_mode = "none";
@@ -62,13 +64,10 @@ $(function() {
     var opacity_toggle_onoff = "on";
     var slider_backup = {};
     var searchindex= "" ;
+    var marker = "";
 
     // Add the three.js 3D anaglyph effect to the viewer.
     viewer.addEffect("AnaglyphEffect");
-
-    // Set up some defaults
-    viewer.setAttribute("clamp_colors", true); // By default clamp range.
-    viewer.setAttribute("flip_colors", false); // Don't flip intensity-color relationship.
 
     ///////////////////////////////////
     // Event Listeners
@@ -78,25 +77,12 @@ $(function() {
     // want the loading icon to stay on the screen.
     BrainBrowser.events.addEventListener("error", hideLoading);
 
-    // When a new color map is loaded display a spectrum representing
-    // the color mapping.
-    viewer.addEventListener("loadcolormap", function(color_map) {
-      var canvas = color_map.createCanvasWithScale(0, 100);
-      var spectrum_div = document.getElementById("color-bar");
-      
-      canvas.id = "spectrum-canvas";
-      if (!spectrum_div) {
-        $("<div id=\"color-bar\"></div>").html(canvas).appendTo("#data-range-box");
-      } else {
-        $(spectrum_div).html(canvas);
-      }
-    });
-
     // When a new model is added to the viewer, create a transparency slider
     // for each shape that makes up the model.
-    viewer.addEventListener("displaymodel", function(object) {
+    viewer.addEventListener("displaymodel", function(event) {
+
       var slider, slider_div, slider_div_end;
-      var children = object.children;
+      var children = event.model_data.shapes;
       var current_count = $("#shapes").children().length;
 
       if(children.length - current_count > 0 ) {
@@ -122,6 +108,9 @@ $(function() {
               viewer.setTransparency(alpha, {
                 shape_name: shape_name
               });
+              if ((marker !== "") && (shape_name == picked_object.name)){
+                viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+	      }
             }
           });
 
@@ -137,17 +126,22 @@ $(function() {
               $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value", 0);
               $(this).html("Off");
 	      document.getElementById("opacity-slider" + i).style.visibility = "hidden";
+              clearMarker();
 	    } else {
               var alpha = slider_backup[shape.name] / 100;
               viewer.setTransparency(alpha, {shape_name: shape.name});
               $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value", slider_backup[shape.name]);
               $(this).html("On");
               document.getElementById("opacity-slider" + i).style.visibility = "visible";
+              if (marker !== ""){
+	        marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+	        marker.name = "marker";
+	        viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+              }
 	    }
           });
         });
       }
-
       $("#searchshapes").autocomplete({
         source: autoshapes
       }).autocomplete("widget").addClass("fixed-height");
@@ -157,18 +151,36 @@ $(function() {
     // to the displayed models.
     viewer.addEventListener("clearscreen", function() {
       $("#shapes").html("");
-      $("#pick-name").html("");
-      $("#pick-shape-number").html("");
+      $("#data-range-box").hide();
+      $("#color-map-box").hide();
+      $("#vertex-data-wrapper").hide();
+      $("#pick-value-wrapper").hide();
+      $("#pick-label-wrapper").hide();
       $("#pick-x").html("");
       $("#pick-y").html("");
       $("#pick-z").html("");
       $("#pick-index").html("");
-      $("#pick-value").html("");
+      $("#pick-value").val("");
+      $("#pick-color").css("background-color", "transparent");
+      $("#pick-label").html("");
+      $("#intensity-data-export").hide();
+      $("#annotation-media").html("");
+      $("#annotation-display").hide();
+      $("#annotation-wrapper").hide();
+      viewer.annotations.reset();
+      picked_object = null;
+      marker = "";
+      select_mode = "none";
+      focus_toggle = "off";
+      opacity_toggle_custom = "off";
+      opacity_toggle_onoff = "on";
+      searchindex= "";
     });
 
     // When the intensity range changes, adjust the displayed spectrum.
-    viewer.addEventListener("changeintensityrange", function(intensity_data) {
-      var canvas = viewer.color_map.createCanvasWithScale(intensity_data.range_min, intensity_data.range_max);
+    viewer.addEventListener("changeintensityrange", function(event) {
+      var intensity_data = event.intensity_data;
+      var canvas = viewer.color_map.createElement(intensity_data.range_min, intensity_data.range_max);
       canvas.id = "spectrum-canvas";
       $("#color-bar").html(canvas);
     });
@@ -176,52 +188,49 @@ $(function() {
     // When new intensity data is loaded, create all UI related to
     // controlling the relationship between the intensity data and
     // the color mapping (range, flip colors, clamp colors, fix range).
-    viewer.addEventListener("loadintensitydata", function(intensity_data) {
+
+    viewer.addEventListener("loadintensitydata", function(event) {
+      var model_data = event.model_data;
+      var intensity_data = event.intensity_data;
       var container = $("#data-range");
       var headers = '<div id="data-range-multiple"><ul>';
       var controls = "";
       var i, count;
-      var data_set = Array.isArray(intensity_data) ? intensity_data : [intensity_data];
-      var model_data = viewer.model_data.get();
+      var data_set = model_data.intensity_data;
 
       container.html("");
       for(i = 0, count = data_set.length; i < count; i++) {
-        headers += '<li><a href="#data-file' + i + '">' + data_set[i].filename + '</a></li>';
+        headers += '<li><a href="#data-file' + i + '">' + data_set[i].name + '</a></li>';
         controls += '<div id="data-file' + i + '" class="box range-controls">';
-        controls += 'Min: <input class="range-box" id="data-range-min" type="text" name="range-min" size="5" >';
-
+        controls += 'Min: <input class="range-box" id="data-range-min" type="text" name="range_min" size="5" >';
         controls += '<div id="range-slider' + i + '" data-blend-index="' + i + '" class="slider"></div>';
-        controls += 'Max: <input class="range-box" id="data-range-max" type="text" name="range-max" size="5">';
-        controls += '<div style="margin-top: 10px">';
-        controls += '<input type="checkbox" class="button" id="fix-range"' +
+        controls += 'Max: <input class="range-box" id="data-range-max" type="text" name="range_max" size="5">';
+        controls += '<input type="checkbox" class="button" id="fix_range"' +
                     (viewer.getAttribute("fix_color_range") ? ' checked="true"' : '') +
-                    '><label for="fix-range">Fix Range</label>\n';
-        controls += '<input type="checkbox" class="button" id="clamp-range"' +
-                    (viewer.getAttribute("clamp_colors") ? ' checked="true"' : '') +
-                    '><label for="clamp-range">Clamp range</label>\n';
-        controls += '<input type="checkbox" class="button" id="flip-range"' +
-                    (viewer.getAttribute("flip_colors") ? ' checked="true"' : '') +
-                    '><label for="flip-range">Flip Colors</label>\n';
-        controls += '</div>';
+                    '><label for="fix_range">Fix Range</label>';
+        controls += '<input type="checkbox" class="button" id="clamp_range"' +
+                    (viewer.color_map && viewer.color_map.clamp ? ' checked="true"' : '') +
+                    '><label for="clamp_range">Clamp range</label>';
+        controls += '<input type="checkbox" class="button" id="flip_range"' +
+                    (viewer.color_map && viewer.color_map.flip ? ' checked="true"' : '') +
+                    '><label for="flip_range">Flip Colors</label>';
         controls += '</div>';
       }
       headers += "</ul>";
-
 
       container.html(headers + controls + "</div>");
       $("#data-range-box").show();
       $("#color-map-box").show();
       container.find("#data-range-multiple").tabs();
 
-      container.find(".range-controls").each(function(index, element) {
-        var controls = $(element);
+      container.find(".range-controls").each(function(index) {
+        var controls = $(this);
         var intensity_data = data_set[index];
 
-        var data_min = BrainBrowser.utils.min(intensity_data.values);
-        var data_max = BrainBrowser.utils.max(intensity_data.values);
+        var data_min = intensity_data.min;
+        var data_max = intensity_data.max;
         var range_min = intensity_data.range_min;
         var range_max = intensity_data.range_max;
-
         var min_input = controls.find("#data-range-min");
         var max_input = controls.find("#data-range-max");
         var slider = controls.find(".slider");
@@ -239,13 +248,13 @@ $(function() {
             max_input.val(max);
             intensity_data.range_min = min;
             intensity_data.range_max = max;
-            viewer.model_data.intensity_data = intensity_data;
-            viewer.setIntensityRange(min, max);
+
+	    viewer.setIntensityRange(intensity_data, min, max);
           }
         });
 
-        slider.slider('values', 0, parseFloat(range_min));
-        slider.slider('values', 1, parseFloat(range_max));
+        slider.slider("values", 0, parseFloat(range_min));
+        slider.slider("values", 1, parseFloat(range_max));
         min_input.val(range_min);
         max_input.val(range_max);
 
@@ -253,81 +262,67 @@ $(function() {
           var min = parseFloat(min_input.val());
           var max = parseFloat(max_input.val());
           
-          slider.slider('values', 0, min);
-          slider.slider('values', 1, max);
-          viewer.setIntensityRange(min, max, controls.find("#clamp-range").is(":checked"));
+          slider.slider("values", 0, min);
+          slider.slider("values", 1, max);
+          viewer.setIntensityRange(intensity_data, min, max);
         }
 
         $("#data-range-min").change(inputRangeChange);
         $("#data-range-max").change(inputRangeChange);
 
-        $("#fix-range").click(function() {
+        $("#fix_range").click(function() {
           viewer.setAttribute("fix_color_range", $(this).is(":checked"));
         });
 
-        $("#clamp-range").change(function() {
+        $("#clamp_range").change(function() {
           var min = parseFloat(min_input.val());
           var max = parseFloat(max_input.val());
 
-          viewer.setAttribute("clamp_colors", $(this).is(":checked"));
+          if (viewer.color_map) {
+            viewer.color_map.clamp = $(this).is(":checked");
+          }
 
-          viewer.setIntensityRange(min, max);
+          viewer.setIntensityRange(intensity_data, min, max);
         });
 
 
-        $("#flip-range").change(function() {
+        $("#flip_range").change(function() {
           var min = parseFloat(min_input.val());
           var max = parseFloat(max_input.val());
 
-          viewer.setAttribute("flip_colors", $(this).is(":checked"));
+          if (viewer.color_map) {
+            viewer.color_map.flip = $(this).is(":checked");
+          }
 
-          viewer.setIntensityRange(min, max);
+          viewer.setIntensityRange(intensity_data, min, max);
         });
-
-        viewer.triggerEvent("changeintensityrange", intensity_data);
       });
 
-      $("#paint-value").val(model_data.intensity_data.values[0]);
 
-      $("#paint-color").css("background-color", "#" + viewer.color_map.colorFromValue(model_data.intensity_data.values[0], {
-        format: "hex",
-        min: model_data.intensity_data.range_min,
-        max: model_data.intensity_data.range_max
+      $("#paint-value").val(intensity_data.values[0]);
+      $("#paint-color").css("background-color", "#" + viewer.color_map.colorFromValue(intensity_data.values[0], {
+        hex: true,
+        min: intensity_data.range_min,
+        max: intensity_data.range_max
       }));
 
+      blendUI(data_set.length > 1);
+
     }); // end loadintensitydata listener
-    
-    // If two color maps are loaded to be blended, create
-    // slider to control the blending ratios.
-    viewer.addEventListener("blendcolormaps", function(){
-      var div = $("#blend-box");
-      var blend_text = $("<span id=\"blend-value\">0.5</span>");
 
-      div.html("Blend Ratio: ");
-      blend_text.appendTo(div);
-      $("<div class=\"blend-slider\" id=\"blend-slider\" width=\"100px\" + height=\"10\"></div>").slider({
-        min: 0.1,
-        max: 0.99,
-        value: 0.5,
-        step: 0.01,
-        slide: function() {
-          var value = $(this).slider("value");
-          viewer.blend(value);
-          blend_text.html(value);
-        }
-      }).appendTo(div);
-    });
-
-    // Update the colors displayed to match the current color mapping.
-    viewer.addEventListener("updatecolors", function() {
+    viewer.addEventListener("updatecolors", function(event) {
+      var model_data = event.model_data;
+      var intensity_data = model_data.intensity_data[0];
       var value = parseFloat($("#pick-value").val());
-      var model_data = viewer.model_data.get();
+      var spectrum_div = document.getElementById("color-bar");
+      var min, max;
+      var canvas;
 
       if (BrainBrowser.utils.isNumeric(value)) {
         $("#pick-color").css("background-color", "#" + viewer.color_map.colorFromValue(value, {
-          format: "hex",
-          min: model_data.intensity_data.range_min,
-          max: model_data.intensity_data.range_max
+          hex: true,
+          min: intensity_data.range_min,
+          max: intensity_data.range_max
         }));
       }
 
@@ -335,22 +330,39 @@ $(function() {
 
       if (BrainBrowser.utils.isNumeric(value)) {
         $("#paint-color").css("background-color", "#" + viewer.color_map.colorFromValue(value, {
-          format: "hex",
-          min: model_data.intensity_data.range_min,
-          max: model_data.intensity_data.range_max
+          hex: true,
+          min: intensity_data.range_min,
+          max: intensity_data.range_max
         }));
+      }
+
+      if (model_data && intensity_data) {
+        min = intensity_data.range_min;
+        max = intensity_data.range_max;
+      } else {
+        min = 0;
+        max = 100;
+      }
+
+      canvas = viewer.color_map.createElement(min, max);
+      canvas.id = "spectrum-canvas";
+      if (!spectrum_div) {
+        $("<div id=\"color-bar\"></div>").html(canvas).appendTo("#data-range-box");
+      } else {
+        $(spectrum_div).html(canvas);
       }
 
     });
 
-    // If intensity data is updated, show link to download new intensity values.
-    viewer.addEventListener("updateintensitydata", function(data) {
+    viewer.addEventListener("updateintensitydata", function(event) {
+      var intensity_data = event.intensity_data;
       var link = $("#intensity-data-export-link");
+      var values = Array.prototype.slice.call(intensity_data.values);
 
-      link.attr("href", BrainBrowser.utils.createDataURL(data.values.join("\n")));
+      link.attr("href", BrainBrowser.utils.createDataURL(values.join("\n")));
       $("#intensity-data-export-link").attr("download", "intensity-values.txt");
       $("#intensity-data-export").show();
-    });
+    }); 
 
     ////////////////////////////////////
     //  START RENDERING
@@ -365,23 +377,34 @@ $(function() {
     ///////////////////////////////////
 
     // Set the background color.
-    $("#clear-color").change(function(e){
+    $("#clear_color").change(function(e){
       viewer.setClearColor(parseInt($(e.target).val(), 16));
     });
     
     // Reset to the default view.
     $("#resetview").click(function() {
+
+      clearMarker();
+
       // Setting the view to its current view type will
       // automatically reset its position and opacity is reset to 100% for all shapes.
-      viewer.setView($("[name=hem-view]:checked").val());
-        viewer.model.children.forEach(function(child) {
-          viewer.setTransparency(1, {shape_name: child.name});
-          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
-        });
+      viewer.setView($("[name=hem_view]:checked").val());
+      viewer.model.children.forEach(function(child,i) {
+        viewer.setTransparency(1, {shape_name: child.name});
+        $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+        $("#individualtoggleopacity" + i).html("On");
+        document.getElementById("opacity-slider" + i).style.visibility = "visible";
+        document.getElementById("shape-" + i).style.backgroundColor = "black";
+        document.getElementById("top-" + i).style.visibility = "hidden";
+      });
+      window.location.hash = "#shape-0";
+      window.location.hash = "#surface-choice";
     });
 
     // Toggle opacity (custom vs. on).
     $("#toggleopacitycustom").click(function() {
+
+      clearMarker();
 
       if (  opacity_toggle_custom == "on") {
         viewer.model.children.forEach(function(child,i) {
@@ -390,7 +413,12 @@ $(function() {
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
           $("#individualtoggleopacity" + i).html("On");
           document.getElementById("opacity-slider" + i).style.visibility = "visible";
-	});
+	}); 
+        if (marker !== ""){
+          marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+          marker.name = "marker";
+          viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+        }
 	opacity_toggle_custom = "off";
         } else {
         viewer.model.children.forEach(function(child,i) {
@@ -407,6 +435,8 @@ $(function() {
     // Toggle opacity (on vs. off).
     $("#toggleopacityonoff").click(function() {
 
+      clearMarker();
+
       if (  opacity_toggle_onoff == "off"){
         viewer.model.children.forEach(function(child,i) {
           viewer.setTransparency(1, {shape_name: child.name});
@@ -414,6 +444,11 @@ $(function() {
           $("#individualtoggleopacity" + i).html("On");
           document.getElementById("opacity-slider" + i).style.visibility = "visible";
         });
+        if (marker !== ""){
+          marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+          marker.name = "marker";
+          viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+        }
         opacity_toggle_onoff = "on";
       } else {
         viewer.model.children.forEach(function(child,i) {
@@ -430,10 +465,7 @@ $(function() {
 
     $("#gosearch").click(function() {
 
-      if (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
-        viewer.model.children[viewer.model.children.length-1].visible = false;
-        viewer.model.children.pop();
-      }
+      clearMarker();
 
       if ((searchshapes.value !== "") && (!/^\d+$/.test(searchshapes.value))){  //Only do the following if string is not blank & contains some text (i.e. not strictly numeric)
 
@@ -445,45 +477,42 @@ $(function() {
         $("#pick-index").html("");
 
         viewer.model.children.forEach(function(child, i) {
-	  var anchor = "shape-" + i;
-  	  var anchor_top = "top-" + i;
 	  if (child.name == searchshapes.value) {
             searchindex = child.name;
             $("#pick-shape-number").html(i+1);
 	    $("#pick-name").html(child.name);
-       	    window.location.hash = "#" + anchor;
-	    document.getElementById(anchor).style.backgroundColor = "#1E8FFF";
-	    document.getElementById(anchor_top).style.visibility = "visible";
+       	    window.location.hash = "#" + "shape-" + i;
+	    document.getElementById("shape-" + i).style.backgroundColor = "#1E8FFF";
+	    document.getElementById("top-" + i).style.visibility = "visible";
             viewer.setTransparency(1, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
             $("#individualtoggleopacity" + i).html("On");
 	  } else {   //focus selected object, no need for shift-click
-	    document.getElementById(anchor).style.backgroundColor = "black";
-	    document.getElementById(anchor_top).style.visibility = "hidden";
+	    document.getElementById("shape-" + i).style.backgroundColor = "black";
+	    document.getElementById("top-" + i).style.visibility = "hidden";
 	    slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
             viewer.setTransparency(0, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
             $("#individualtoggleopacity" + i).html("Off");
 	  }
         });
+	marker = "";
       } else if ((searchshapes.value !== "") && (/^\d+$/.test(searchshapes.value)))  {  // If strictly numeric, search by vertex number
 
         searchindex = searchshapes.value;	  
         pick(viewer.x, viewer.y, slider_backup, searchindex);	//viewer.x and viewer.y are irrelevant and overwritten
 
 	viewer.model.children.forEach(function(child, i) {
-          var anchor = "shape-" + i;
-          var anchor_top = "top-" + i;
           if (child.name == picked_object.name) {
-            window.location.hash = "#" + anchor;
-            document.getElementById(anchor).style.backgroundColor = "#1E8FFF";
-            document.getElementById(anchor_top).style.visibility = "visible";
+            window.location.hash = "#" + "shape-" + i;
+            document.getElementById("shape-" + i).style.backgroundColor = "#1E8FFF";
+            document.getElementById("top-" + i).style.visibility = "visible";
             viewer.setTransparency(1, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
             $("#individualtoggleopacity" + i).html("On");
           } else {   //focus selected object, no need for shift-click
-            document.getElementById(anchor).style.backgroundColor = "black";
-            document.getElementById(anchor_top).style.visibility = "hidden";
+            document.getElementById("shape-" + i).style.backgroundColor = "black";
+            document.getElementById("top-" + i).style.visibility = "hidden";
             slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
             viewer.setTransparency(0, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
@@ -491,7 +520,9 @@ $(function() {
 	  }
         });
       searchindex = picked_object.name;
-      viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+      marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+//      marker.name = "marker";
+//      viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
       }
     focus_toggle = "on";
     select_mode = "search";
@@ -499,20 +530,25 @@ $(function() {
 
     // If Search box "Clear" button pressed
     $("#clearsearch").click(function() {
+      clearMarker();
       document.getElementById("searchshapes").value="";
       viewer.model.children.forEach(function(child, i) {
-        var anchor = "shape-" + i;
-        var anchor_top = "top-" + i;
 	window.location.hash = "#shape-0";
         window.location.hash = "#surface-choice";
-        document.getElementById(anchor).style.backgroundColor = "black";
-        document.getElementById(anchor_top).style.visibility = "hidden";
+        document.getElementById("shape-" + i).style.backgroundColor = "black";
+        document.getElementById("top-" + i).style.visibility = "hidden";
         viewer.setTransparency(1, {shape_name: child.name});
         $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
       });
     focus_toggle = "off";
     searchshapes.value="";
     searchindex = "";
+    $("#pick-name").html("");
+    $("#pick-shape-number").html("");
+    $("#pick-x").html("");
+    $("#pick-y").html("");
+    $("#pick-z").html("");
+    $("#pick-index").html("");
     });
 
     // Set the visibility of the currently loaded model.
@@ -523,12 +559,6 @@ $(function() {
 
       if (!shape) return;
 
-      // If the shapes wireframe is currently being displayed,
-      // set the wireframe's visibility.
-      if (shape.wireframe_active) {
-        shape = shape.getObjectByName("__wireframe__") || shape;
-      }
-
       shape.visible = input.is(":checked");
 
       viewer.updated = true;
@@ -536,12 +566,12 @@ $(function() {
     
     // Set the view type (medial, lateral,
     // inferior, anterior, posterior).
-    $("[name=hem-view]").change(function() {
-      viewer.setView($("[name=hem-view]:checked").val());
+    $("[name=hem_view]").change(function() {
+      viewer.setView($("[name=hem_view]:checked").val());
     });
     
     // Toggle wireframe.
-    $("#wireframe").change(function() {
+    $("#meshmode").change(function() {
       viewer.setWireframe($(this).is(":checked"));
     });
     
@@ -552,15 +582,14 @@ $(function() {
     
     // Grab a screenshot of the canvas.
     $("#screenshot").click(function() {
-      var view_window = viewer.dom_element;
+      var dom_element = viewer.dom_element;
       var canvas = document.createElement("canvas");
       var spectrum_canvas = document.getElementById("spectrum-canvas");
       var context = canvas.getContext("2d");
       var viewer_image = new Image();
-      var fileName;
       
-      canvas.width = view_window.offsetWidth;
-      canvas.height = view_window.offsetHeight;
+      canvas.width = dom_element.offsetWidth;
+      canvas.height = dom_element.offsetHeight;
     
       // Display the final image in a dialog box.
       function displayImage() {
@@ -627,6 +656,18 @@ $(function() {
       viewer.autorotate.z = $("#autorotateZ").is(":checked");
     });
 
+    // Color map URLs are read from the config file and added to the
+    // color map select box.
+    var color_map_select = $('<select id="color-map-select"></select>').change(function() {
+      viewer.loadColorMapFromURL($(this).val());
+    });
+
+    BrainBrowser.config.get("color_maps").forEach(function(color_map) {
+      color_map_select.append('<option value="' + color_map.url + '">' + color_map.name +'</option>');
+    });
+
+    $("#color-map-box").append(color_map_select);
+
     // Remove currently loaded models.
     $("#clearshapes").click(function() {
       viewer.clearScreen();
@@ -636,36 +677,37 @@ $(function() {
     });
 
     $("#brainbrowser").click(function(event) {
-      if (!event.shiftKey) return;
+      if (!event.shiftKey && !event.ctrlKey) return;
+      if (viewer.model.children.length === 0) return;
       searchshapes.value = "";
-      searchindex="";
+      searchindex = "";
 
-      if (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
-        viewer.model.children[viewer.model.children.length-1].visible = false;
-        viewer.model.children.pop();
-      }
+      clearMarker();
 
       viewer.model.children.forEach(function(child) {
       slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
 	});
 
       pick(viewer.mouse.x, viewer.mouse.y, event.ctrlKey);
-
-      viewer.model.children.forEach(function(child, i) {
-        var anchor = "shape-" + i;
-        var anchor_top = "top-" + i;
-        if (child.name == picked_object.name) {
-          window.location.hash = "#" + anchor;
-          document.getElementById(anchor).style.backgroundColor = "#1E8FFF";
-          document.getElementById(anchor_top).style.visibility = "visible";
-        } else {   //focus selected object, no need for shift-click
-          document.getElementById(anchor).style.backgroundColor = "black";
-          document.getElementById(anchor_top).style.visibility = "hidden";
-        }
-      });
-      var sphere = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
-      select_mode = "click";
-      focus_toggle = "off";
+      if (picked_object === null) {
+        return;
+      } else {
+        viewer.model.children.forEach(function(child, i) {
+          if (child.name == picked_object.name) {
+            window.location.hash = "#" + "shape-" + i;
+            document.getElementById("shape-" + i).style.backgroundColor = "#1E8FFF";
+            document.getElementById("top-" + i).style.visibility = "visible";
+          } else {   //focus selected object, no need for shift-click
+            document.getElementById("shape-" + i).style.backgroundColor = "black";
+            document.getElementById("top-" + i).style.visibility = "hidden";
+          }
+        });
+        marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+        marker.name = "marker";
+        viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+        select_mode = "click";
+        focus_toggle = "off";
+      }
     });
 
     $("#focus-shape").click(function(event) {
@@ -704,57 +746,15 @@ $(function() {
 	}
     });
 
-    document.getElementById("brainbrowser").addEventListener("touchend", function(event) {
-      var touch = event.changedTouches[0];
-      var offset = BrainBrowser.utils.getOffset(this);
-      var x, y;
-
-      if (touch.pageX !== undefined) {
-        x = touch.pageX;
-        y = touch.pageY;
-      } else {
-        x = touch.clientX + window.pageXOffset;
-        y = touch.clientY + window.pageYOffset;
-      }
-      
-      x = x - offset.left;
-      y = y - offset.top;
-
-      pick(x, y, true);
-    }, false);
-
-    $("#pick-value").change(function() {
-      var index = parseInt($("#pick-index").html(), 10);
-      var value = parseFloat(this.value);
-      if (BrainBrowser.utils.isNumeric(index) && BrainBrowser.utils.isNumeric(value)) {
-        viewer.setIntensity(index, value);
-      }
-    });
-
-    $("#paint-value").change(function() {
-      var value = parseFloat(this.value);
-      var model_data = viewer.model_data.get();
-
-      if (BrainBrowser.utils.isNumeric(value)) {
-        $("#paint-color").css("background-color", "#" + viewer.color_map.colorFromValue(value, {
-          format: "hex",
-          min: model_data.intensity_data.range_min,
-          max: model_data.intensity_data.range_max
-        }));
-      }
-    });
-
-    // If the user changes the format that's being submitted,
-    // display a hint if one has been configured.
-    $(".file-format").change(function() {
-      var div = $(this).closest(".file-select");
-      var format = div.find("option:selected").val();
-      div.find(".format-hint").html(BrainBrowser.config.surface_viewer.model_types[format].format_hint || "");
-    });
-
     // Load a new model from a file that the user has
     // selected.
     $("#obj-file-submit").click(function() {
+
+      if (document.getElementById("objfile").value == ""){
+        window.alert("Please select a file!");
+        return;
+      }
+
       var format = $(this).closest(".file-select").find("option:selected").val();
 
       showLoading();
@@ -762,37 +762,80 @@ $(function() {
         format: format,
         complete: hideLoading
       });
-
       return false;
     });
 
-    $("#data1-submit").click(function() {
-      var format = $(this).closest(".file-select").find("option:selected").val();
-      var file = document.getElementById("datafile1");
+    $("#pick-value").change(function() {
+      var index = parseInt($("#pick-index").html(), 10);
+      var value = parseFloat(this.value);
+      var intensity_data = viewer.model_data.getDefaultIntensityData();
 
-      viewer.loadIntensityDataFromFile(file, {
-        format: format,
-        blend_index : 0
-      });
+      if (BrainBrowser.utils.isNumeric(index) && BrainBrowser.utils.isNumeric(value)) {
+        viewer.setIntensity(intensity_data, index, value);
+      }
     });
 
-    $("#data2-submit").click(function() {
-      var format = $(this).closest(".file-select").find("option:selected").val();
-      var file = document.getElementById("datafile2");
+    $("#paint-value").change(function() {
+      var value = parseFloat(this.value);
+      var intensity_data = viewer.model_data.getDefaultIntensityData();
 
-      viewer.loadIntensityDataFromFile(file, {
-        format: format,
-        blend_index : 1
-      });
+      if (BrainBrowser.utils.isNumeric(value)) {
+        $("#paint-color").css("background-color", "#" + viewer.color_map.colorFromValue(value, {
+          hex: true,
+          min: intensity_data.range_min,
+          max: intensity_data.range_max
+        }));
+      }
     });
 
-    // Load a color map select by the user.
-    $("#color-map").change(function() {
-      viewer.loadColorMapFromFile(this);
-    });
+    $("#annotation-save").click(function() {
+      var vertex_num = parseInt($("#pick-index").html(), 10);
+      var annotation_display = $("#annotation-display");
+      var media = $("#annotation-media");
 
-    // Load first model.
-    $("a.example[data-example-name=realct]").click();
+      var annotation, annotation_data;
+      var vertex;
+
+      if (BrainBrowser.utils.isNumeric(vertex_num)) {
+        annotation = viewer.annotations.get(vertex_num, {
+          model_name: picked_object.model_name
+        });
+
+        if (annotation) {
+          annotation_data = annotation.annotation_info.data;
+        } else {
+          annotation_data = {};
+          viewer.annotations.add(vertex_num, annotation_data, {
+            model_name: picked_object.model_name
+          });
+        }
+
+        vertex = viewer.getVertex(vertex_num);
+
+        annotation_data.image = $("#annotation-image").val();
+        annotation_data.url = $("#annotation-url").val();
+        annotation_data.text = $("#annotation-text").val();
+
+        media.html("");
+
+        if (annotation_data.image) {
+          var image = new Image();
+          image.width = 200;
+          image.src = annotation_data.image;
+          annotation_display.show();
+          media.append(image);
+        }
+        if (annotation_data.url) {
+          annotation_display.show();
+          media.append($('<div><a href="' + annotation_data.url + '" target="_blank">' + annotation_data.url + '</a></div>'));
+        }
+
+        if (annotation_data.text) {
+          annotation_display.show();
+          media.append($('<div>' + annotation_data.text + '</div>'));
+        }
+      }
+    });
 
     function pick(x, y, paint) {
       if (viewer.model.children.length === 0) return;
@@ -800,7 +843,7 @@ $(function() {
       var annotation_display = $("#annotation-display");
       var media = $("#annotation-media");
       var pick_info = viewer.pick(x, y, slider_backup, searchindex);
-      var model_data;
+      var model_data, intensity_data;
       var annotation_info;
       var value, label, text;
 
@@ -814,25 +857,25 @@ $(function() {
         $("#annotation-wrapper").show();
         picked_object = pick_info.object;
         picked_coords = pick_info.point; 
-        if (pick_info.color){
-          picked_object_color = pick_info.color; 
-        }
-        model_data = viewer.model_data.get(picked_object.model_name);
-        if (model_data.intensity_data) {
-          if (paint) {
+        model_data = viewer.model_data.get(picked_object.userData.model_name);
+        intensity_data = model_data.intensity_data[0];
+
+        if (intensity_data) {
+          if (event.ctrlKey) {
             value = parseFloat($("#paint-value").val());
+
             if (BrainBrowser.utils.isNumeric(value)) {
-              viewer.setIntensity(pick_info.index, value);
+              viewer.setIntensity(intensity_data, pick_info.index, value);
             }
           }
 
-          value = model_data.intensity_data.values[pick_info.index];
+          value = intensity_data.values[pick_info.index];
           $("#pick-value").val(value.toString().slice(0, 7));
           $("#pick-color").css("background-color", "#" + viewer.color_map.colorFromValue(value, {
-            format: "hex",
-            min: model_data.intensity_data.range_min,
-            max: model_data.intensity_data.range_max
-          }));
+            hex: true,
+            min: intensity_data.range_min,
+            max: intensity_data.range_max
+	  }));
           label = atlas_labels[value];
           if (label) {
             text = label + '<BR><a target="_blank" href="http://www.ncbi.nlm.nih.gov/pubmed/?term=' +
@@ -847,7 +890,7 @@ $(function() {
           $("#pick-label").html(text);
         }
 
-        annotation_info = picked_object.annotation_info;
+        annotation_info = pick_info.object.userData.annotation_info;
 
         if (annotation_info) {
           viewer.annotations.activate(annotation_info.vertex, {
@@ -890,9 +933,8 @@ $(function() {
         $("#pick-y").html("");
         $("#pick-z").html("");
         $("#pick-index").html("");
+        $("#annotation-wrapper").hide();
       }
-
-      viewer.updated = true;
     }
 
     function shapeNumber(name) {
@@ -903,6 +945,14 @@ $(function() {
         if (children[i].name === name) {
           return i + 1;
         }
+      }
+    }
+
+    function clearMarker() {     
+      while (viewer.model.children.length > $("#shapes").children().length){  //If a sphere/marker was added, get rid of it
+        viewer.model.children[viewer.model.children.length-1].visible = false;
+        viewer.model.children.pop();
+        viewer.updated = true;
       }
     }
   });

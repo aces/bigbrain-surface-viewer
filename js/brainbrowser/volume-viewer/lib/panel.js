@@ -77,7 +77,9 @@
   * for certain events occuring over the panel's lifetime. Currently, the
   * following panel events can be listened for:
   *
-  * * **zoom** The zoome level has changed on the panel.
+  * * **sliceupdate** The slice being displayed has been updated.
+  * * **cursorupdate** The cursor has moved.
+  * * **zoom** The zoom level has changed on the panel.
   * * **draw** The panel is being re-drawn.
   *
   * To listen for an event, simply use the viewer's **addEventListener()** method with
@@ -92,29 +94,18 @@
   */
   /**
   * @doc object
-  * @name VolumeViewer.Panel Events:draw
+  * @name VolumeViewer.Panel Events:sliceupdate
   *
   * @description
-  * Triggered when the panel is redrawn
-  * The event handler receives the panel volume as argument.
+  * Triggered when the slice being displayed is updated. 
+  * The following information will be passed in the event object:
+  *
+  * * **event.volume**: the volume on which the slice was updated.
+  * * **event.slice**: the new slice.
   *
   * ```js
-  *    panel.addEventListener("draw", function(volume) {
-  *      console.log("New zoom level:", panel.zoom);
-  *    });
-  * ```
-  */
-  /**
-  * @doc object
-  * @name VolumeViewer.Panel Events:zoom
-  *
-  * @description
-  * Triggered when the user changes the zoom level of the panel (scroll or touch events).
-  * The event handler receives the panel volume as argument.
-  *
-  * ```js
-  *    panel.addEventListener("zoom", function(volume) {
-  *      console.log("New zoom level:", panel.zoom);
+  *    panel.addEventListener("sliceupdate", function(event) {
+  *      console.log("New slice!");
   *    });
   * ```
   */
@@ -124,11 +115,50 @@
   *
   * @description
   * Triggered when the user changes the cursor's position in the panel.
-  * The event handler receives the new cursor position as argument.
+  * The following information will be passed in the event object:
+  *
+  * * **event.volume**: the volume for which the cursor moved.
+  * * **event.cursor**: an object representing the cursor position.
   *
   * ```js
-  *    panel.addEventListener("cursorupdate", function(cursor) {
-  *      console.log("New cursor position:", cursor.x, cursor.y);
+  *    panel.addEventListener("cursorupdate", function(event) {
+  *      console.log("New cursor position:", event.cursor.x, event.cursor.y);
+  *    });
+  * ```
+  */
+  /**
+  * @doc object
+  * @name VolumeViewer.Panel Events:zoom
+  *
+  * @description
+  * Triggered when the user changes the zoom level of the panel (scroll or touch events).
+  * The following information will be passed in the event object:
+  *
+  * * **event.volume**: the volume on which the slice was updated.
+  * * **event.zoom**: the new zoom level.
+  *
+  * ```js
+  *    panel.addEventListener("zoom", function(event) {
+  *      console.log("New zoom level:", event.zoom);
+  *    });
+  * ```
+  */
+  /**
+  * @doc object
+  * @name VolumeViewer.Panel Events:draw
+  *
+  * @description
+  * Triggered when the panel is redrawn.
+  * The following information will be passed in the event object:
+  *
+  * * **event.canvas**: the panel drawing canvas.
+  * * **event.context**: the panel canvas 2D drawing context.
+  * * **event.volume**: the volume on which the slice was updated.
+  * * **event.cursor**: an object representing the cursor position.
+  *
+  * ```js
+  *    panel.addEventListener("draw", function(event) {
+  *      console.log("Panel refresh!");
   *    });
   * ```
   */
@@ -151,6 +181,10 @@
     };
 
     var update_timeout = null;
+
+    // Because slice updates can be interrupted, keep
+    // callbacks in an array to be executed at the end.
+    var update_callbacks = [];
 
     var panel = {
       image_center: {
@@ -316,6 +350,9 @@
       updateSlice: function(callback) {
         
         clearTimeout(update_timeout);
+        if (BrainBrowser.utils.isFunction(callback)) {
+          update_callbacks.push(callback);
+        }
 
         update_timeout = setTimeout(function() {
           var volume = panel.volume;
@@ -323,18 +360,20 @@
           
           slice = volume.slice(panel.axis);
 
-          slice.min = volume.min;
-          slice.max = volume.max;
-
           setSlice(panel, slice);
 
-          panel.triggerEvent("sliceupdate", slice);
+          panel.triggerEvent("sliceupdate", {
+            volume: volume,
+            slice: slice
+          });
 
           panel.updated = true;
 
-          if (BrainBrowser.utils.isFunction(callback)) {
+          update_callbacks.forEach(function(callback) {
             callback(slice);
-          }
+          });
+          update_callbacks.length = 0;
+
         }, 0);
       },
 
@@ -357,13 +396,19 @@
           old_cursor_position.x = cursor.x;
           old_cursor_position.y = cursor.y;
           panel.updated = true;
-          panel.triggerEvent("cursorupdate", cursor);
+          panel.triggerEvent("cursorupdate", {
+            volume: panel.volume,
+            cursor: cursor
+          });
         }
 
         if (old_zoom_level !== panel.zoom) {
           old_zoom_level = panel.zoom;
           panel.updated = true;
-          panel.triggerEvent("zoom", panel.volume);
+          panel.triggerEvent("zoom", {
+            volume: panel.volume,
+            zoom: panel.zoom
+          });
         }
 
         if (panel.touches[0]) {
@@ -378,7 +423,6 @@
           return;
         }
 
-        var volume = panel.volume;
         var canvas = panel.canvas;
         var context = panel.context;
         var frame_width = 4;
@@ -388,7 +432,14 @@
         context.clearRect(0, 0, canvas.width, canvas.height);
 
         drawSlice(panel);
-        panel.triggerEvent("draw", volume);
+        
+        panel.triggerEvent("draw", {
+          volume: panel.volume,
+          cursor: cursor,
+          canvas: canvas,
+          context: context
+        });
+        
         drawCursor(panel, cursor_color);
 
         if (active) {
@@ -436,7 +487,7 @@
   // Set the volume slice to be rendered on the panel.
   function setSlice(panel, slice) {
     panel.slice = slice;
-    panel.slice_image = panel.slice.getImage(panel.zoom, panel.contrast, panel.brightness);
+    panel.slice_image = panel.volume.getSliceImage(panel.slice, panel.zoom, panel.contrast, panel.brightness);
   }
 
   // Draw the cursor at its current position on the canvas.
@@ -536,4 +587,5 @@
   }
 
 })();
+
 

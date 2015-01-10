@@ -30,10 +30,46 @@
   self.addEventListener("message", function(event) {
     var data = event.data;
 
-    self.postMessage(createWireframe(data.positions, data.colors));
+    var result, transfer;
+
+    if (data.indices) {
+      result = createIndexedWireframe(data.indices);
+      transfer = [result.indices.buffer];
+    } else {
+      result = createUnindexedWireframe(data.positions, data.colors);
+      transfer = [result.positions.buffer, result.colors.buffer];
+    }
+
+    self.postMessage(result, transfer);
   });
 
-  function createWireframe(positions, colors) {
+  function createIndexedWireframe(indices) {
+    var wire_indices = new Uint32Array(indices.length * 2);
+    var i, iw, count;
+
+    for (i = 0, count = indices.length; i < count; i += 3) {
+      iw = i * 2;
+
+      // v1 - v2
+      wire_indices[iw]      = indices[i];
+      wire_indices[iw + 1]  = indices[i + 1];
+
+      // v2 - v3
+      wire_indices[iw + 2]  = indices[i + 1];
+      wire_indices[iw + 3]  = indices[i + 2];
+
+      // v3 - v1
+      wire_indices[iw + 4] = indices[i + 2];
+      wire_indices[iw + 5] = indices[i];
+
+    }
+
+    return {
+      indices: wire_indices
+    };
+  }
+
+  function createUnindexedWireframe(positions, colors) {
     var wire_verts = new Float32Array(positions.length * 2);
     var wire_colors = new Float32Array(colors.length * 2);
     var i, iw, iv, ic, iwc;
@@ -106,3 +142,4 @@
     };
   }
 })();
+

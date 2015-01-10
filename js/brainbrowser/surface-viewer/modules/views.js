@@ -27,6 +27,8 @@
 BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
   "use strict";
 
+  var THREE = BrainBrowser.SurfaceViewer.THREE;
+
   var MAX_WIREFRAME_WORKERS = 20;
   var active_wireframe_jobs = 0;
 
@@ -157,7 +159,7 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
       wireframe = shape.getObjectByName("__WIREFRAME__");
       if (wireframe) {
         toggleWireframe(shape, wireframe, is_wireframe);
-      } else if (shape.has_wireframe) {
+      } else if (shape.userData.has_wireframe && !shape.userData.creating_wireframe) {
         createWireframe(shape, function(wireframe) {
           toggleWireframe(shape, wireframe, is_wireframe);
         });
@@ -223,6 +225,7 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
   ////////////////////////////////////
 
   function createWireframe(shape, callback) {
+    shape.userData.creating_wireframe = true;
     if (active_wireframe_jobs < MAX_WIREFRAME_WORKERS) {
       launchWireframeWorker(shape, callback);
     } else {
@@ -235,24 +238,31 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
   function launchWireframeWorker(shape, callback) {
     var worker = new Worker(BrainBrowser.SurfaceViewer.worker_urls.wireframe);
     var geometry = shape.geometry.attributes;
+    var message;
 
     worker.addEventListener("message", function(event) {
-      var positions = event.data.positions;
-      var colors = event.data.colors;
-
       var wire_geometry = new THREE.BufferGeometry();
       var material, wireframe;
+      var position_buffer, color_buffer;
 
-      wire_geometry.attributes.position = {
-        itemSize: 3,
-        array: positions,
-        numItems: positions.length
-      };
+      if (event.data.positions) {
+        position_buffer = new THREE.BufferAttribute(event.data.positions, 3);
+      } else {
+        position_buffer = geometry.position;
+      }
 
-      wire_geometry.attributes.color = {
-        itemSize: 4,
-        array: colors,
-      };
+      if (event.data.colors) {
+        color_buffer = new THREE.BufferAttribute(event.data.colors, 4);
+      } else {
+        color_buffer = geometry.color;
+      }
+      
+      wire_geometry.addAttribute("position", position_buffer);
+      wire_geometry.addAttribute("color", color_buffer);
+
+      if (event.data.indices) {
+        wire_geometry.addAttribute("index", new THREE.BufferAttribute(event.data.indices, 1));
+      }
 
       wire_geometry.attributes.color.needsUpdate = true;
 
@@ -260,28 +270,37 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
       wireframe = new THREE.Line(wire_geometry, material, THREE.LinePieces);
 
       wireframe.name = "__WIREFRAME__";
-      wireframe.visible = false;
-      shape.wireframe_active = false;
+      wireframe.material.visible = false;
       shape.add(wireframe);
+      shape.creating_wireframe = false;
       active_wireframe_jobs--;
       callback(wireframe);
 
       worker.terminate();
     });
 
-    worker.postMessage({
-      positions: geometry.position.array,
-      colors: geometry.color.array,
-    });
+    if (BrainBrowser.WEBGL_UINT_INDEX_ENABLED) {
+      message = {
+        indices: geometry.index.array
+      };
+    } else {
+      message = {
+        positions: geometry.position.array,
+        colors: geometry.color.array
+      };
+    }
+
+    worker.postMessage(message);
+
     active_wireframe_jobs++;
   }
 
   function toggleWireframe(shape, wireframe, is_wireframe) {
-    shape.visible = !is_wireframe;
-    wireframe.visible = is_wireframe;
-    shape.wireframe_active = is_wireframe;
+    shape.material.visible = !is_wireframe;
+    wireframe.material.visible = is_wireframe;
     viewer.updated = true;
   }
   
 };
+
 

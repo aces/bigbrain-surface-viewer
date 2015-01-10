@@ -28,6 +28,8 @@
 BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
   "use strict";
   
+  var THREE = BrainBrowser.SurfaceViewer.THREE;
+  
   var renderer = new THREE.WebGLRenderer({ preserveDrawingBuffer: true });
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(30, viewer.dom_element.offsetWidth / viewer.dom_element.offsetHeight, 1, 3000);
@@ -56,27 +58,36 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
   viewer.render = function() {
     var dom_element = viewer.dom_element;
     renderer.setClearColor(0x000000);
-    renderer.setSize(dom_element.offsetWidth, dom_element.offsetHeight);
     dom_element.appendChild(renderer.domElement);
     
     camera.position.z = default_camera_distance;
     
     light.position.set(0, 0, default_camera_distance);
     scene.add(light);
-    
-    viewer.autorotate = {};
-    
-    window.onresize = function() {
-      effect.setSize(dom_element.offsetWidth, dom_element.offsetHeight);
-      camera.aspect = dom_element.offsetWidth / dom_element.offsetHeight;
-      camera.updateProjectionMatrix();
-
-      viewer.updated = true;
-    };
-    
-    window.onresize();
+        
+    viewer.updateViewport();
     
     renderFrame();
+  };
+
+  /**
+  * @doc function
+  * @name viewer.rendering:updateViewport
+  * @description
+  * Update the viewport size and aspect ratio to fit
+  * the current size of the viewer DOM element.
+  * ```js
+  * viewer.updateViewport();
+  * ```
+  */
+  viewer.updateViewport = function() {
+    var dom_element = viewer.dom_element;
+
+    effect.setSize(dom_element.offsetWidth, dom_element.offsetHeight);
+    camera.aspect = dom_element.offsetWidth / dom_element.offsetHeight;
+    camera.updateProjectionMatrix();
+
+    viewer.updated = true;
   };
 
   /**
@@ -162,27 +173,35 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
   */
   viewer.resetView = function() {
     var model = viewer.model;
-    var child, wireframe;
-    var i, count;
     var inv = new THREE.Matrix4();
     inv.getInverse(model.matrix);
   
     model.applyMatrix(inv);
     camera.position.set(0, 0, default_camera_distance);
     light.position.set(0, 0, default_camera_distance);
-    viewer.zoom = 1;
-    
-    for (i = 0, count = viewer.model.children.length; i < count; i++) {
-      child = model.children[i];
-      if (child.centroid) {
-        child.position.set(child.centroid.x, child.centroid.y, child.centroid.z);
-      } else {
-        child.position.set(0, 0, 0);
-      }
-      child.rotation.set(0, 0, 0);
 
-      wireframe = child.getObjectByName("__WIREFRAME__");
-    }
+    model.children.forEach(function(shape) {
+      var centroid = shape.userData.centroid;
+      var recentered = shape.userData.recentered;
+
+      // The check for original_data tells us
+      // this is a loaded model, rather than
+      // an annotation, etc.
+      if (shape.userData.original_data) {
+        if (centroid && recentered) {
+          shape.position.set(
+            centroid.x,
+            centroid.y,
+            centroid.z
+          );
+        } else {
+          shape.position.set(0, 0, 0);
+        }
+        shape.rotation.set(0, 0, 0);
+      }
+    });
+    
+    viewer.zoom = 1;
 
     viewer.updated = true;
   };
@@ -274,44 +293,41 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
       var intersect_object;
 
       var vector = viewer.getVertex(searchindex); //find xyz coords of vertex number
-      var model_data = viewer.model_data.get();
 
-      for (i = 0; i < viewer.model.children.length; i++) {
+      for (i = 0; i < model.children.length; i++) {
 
-	var vertices = model_data.shapes[i].indices;
+        var vertices = model.children[i].geometry.attributes.index.array;
+	var j;
 
  	for (j = 0; j < vertices.length; j++) {
  	  if (vertices[j] == searchindex){
-	    intersect_object = model_data.shapes[i];
+	    intersect_object = model.children[i];
             searchindex = parseInt(searchindex);
-	    var color = model_data.shapes[i].color;
             vertex_data = {
               index: searchindex,
               point: vector,
               object: intersect_object,
-              color: color
             };
 	    break
 	  }
   	}
       }
     } else {	//if searching by shift-click (and not searchstring), find intersection
-      // Convert to normalized coordinates.
+
+      // Convert to normalized device coordinates.
       x = (x / viewer.dom_element.offsetWidth) * 2 - 1;
       y = (-y / viewer.dom_element.offsetHeight) * 2 + 1;
 
-      var projector = new THREE.Projector();
       var raycaster = new THREE.Raycaster();
       var vector = new THREE.Vector3(x, y, camera.near);
-
       var intersection = null;
       var intersects, vertex_data;
-      var intersect_object, intersect_point, intersect_indices;
+      var intersect_object, intersect_point, intersect_indices, intersect_face;
       var intersect_vertex_index, intersect_vertex_coords;
       var min_distance;
       var original_vertices, original_indices;
       var index, coords, distance;
-      var i, j, count;
+      var i, count;
       var centroid, cx, cy, cz;
       var opacity_threshold = 25; //somewhat arbitrary threshold of 25%
 
@@ -321,53 +337,67 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
       // original position.
       var inv_matrix = new THREE.Matrix4();
 
-      projector.unprojectVector(vector, camera);
+      vector.unproject(camera);
       raycaster.set(camera.position, vector.sub(camera.position).normalize());
       intersects = raycaster.intersectObject(model, true);
 
       for (i = 0; i < intersects.length; i++) {
       
         if (slider_backup[intersects[i].object.name] < opacity_threshold){
-	  intersects[i].object.__PICK_IGNORE__ = true;
+          intersects[i].object.userData.pick_ignore = true;
         } else {
           intersection = intersects[i];
           break;
         }
       }
 
-        if (intersection !== null) {
+      if (intersection !== null) {
 
         intersect_object = intersection.object;
-        intersect_indices = intersection.indices;
+        intersect_face = intersection.face;
+ 	intersect_indices = [
+	  intersect_face.a,
+	  intersect_face.b,
+	  intersect_face.c
+	];
 
-        if (intersect_object.annotation_info) {
+        if (intersect_object.userData.annotation_info) {
           vertex_data = {
-            index: intersect_object.annotation_info.vertex,
-            point: intersect_object.annotation_info.position,
+            index: intersect_object.userData.annotation_info.vertex,
+            point: intersect_object.userData.annotation_info.position,
             object: intersect_object
           };
 	  return vertex_data;
         } else {
           // We're dealing with an imported model.
 
-          // Objects have their origins centered
-          // to help with transparency, so to check
-          // check against original vertices we have
-          // move them back.
-          centroid = intersect_object.centroid;
-          cx = centroid.x;
-          cy = centroid.y;
-          cz = centroid.z;
+          if (intersect_object.userData.recentered) {
+            // Objects have their origins centered
+            // to help with transparency, so to check
+            // check against original vertices we have
+            // move them back.
+            centroid = intersect_object.userData.centroid;
+            cx = centroid.x;
+            cy = centroid.y;
+            cz = centroid.z;
+	  } else {
+	    cx = cy = cz = 0;
+	  }
 
           inv_matrix.getInverse(intersect_object.matrixWorld);
           intersect_point = intersection.point.applyMatrix4(inv_matrix);
 
-          original_vertices = intersect_object.geometry.original_data.vertices;
-          original_indices = intersect_object.geometry.original_data.indices;
+          original_vertices = intersect_object.userData.original_data.vertices;
+          original_indices = intersect_object.userData.original_data.indices;
 
-          // Have to get the vertex pointed to by the original index because of
-          // the de-indexing (see workers/deindex.worker.js)
-          intersect_vertex_index = index = original_indices[intersect_indices[0]];
+	  index = intersect_indices[0];
+	  if (!BrainBrowser.WEBGL_UINT_INDEX_ENABLED) {
+	    // Have to get the vertex pointed to by the original index because of
+	    // the de-indexing (see workers/deindex.worker.js)
+	    index = original_indices[index];
+	  }
+	  intersect_vertex_index = index;
+
           intersect_vertex_coords = new THREE.Vector3(
             original_vertices[index*3],
             original_vertices[index*3+1],
@@ -384,7 +414,12 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
           );
 
           for (i = 1, count = intersect_indices.length; i < count; i++) {
-            index = original_indices[intersect_indices[i]];
+	    index = intersect_indices[i];
+ 	    if (!BrainBrowser.WEBGL_UINT_INDEX_ENABLED) {
+	      // Have to get the vertex pointed to by the original index because of
+              // the de-indexing (see workers/deindex.worker.js)
+              index = original_indices[index];
+	    }
             coords = new THREE.Vector3(
               original_vertices[index*3],
               original_vertices[index*3+1],
@@ -454,7 +489,7 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
     if (old_zoom_level !== viewer.zoom) {
       old_zoom_level = viewer.zoom;
       viewer.updated = true;
-      viewer.triggerEvent("zoom", viewer.zoom);
+      viewer.triggerEvent("zoom", { zoom: viewer.zoom });
     }
 
     if (viewer.updated) {
@@ -463,7 +498,11 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
         light.position.z = new_z;
       }
       effect.render(scene, camera);
-      viewer.triggerEvent("draw", effect, scene, camera);
+      viewer.triggerEvent("draw", {
+        renderer: effect,
+        scene: scene,
+        camera: camera
+      });
       viewer.updated = false;
     }
   }
@@ -600,3 +639,4 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
  
  
  
+
