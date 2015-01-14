@@ -54,24 +54,24 @@
       <div id="brainbrowser"></div>
       <div id="controls">
         <div id="controls-content">
-          <div id="surface-choice" class="box full-box">
+          <div id="surface_choice" class="box full-box">
             <h4>Load your own data!</h4>
             <div class="instructions">
               (Note: your data will remain on your computer and will not be transferred to the BrainBrowser server.)
             </div>     
-            <div id="obj-file-select" class="file-select">
+            <div id="obj_file_select" class="file-select">
               Object File:
               <input type="file" name="objfile" id="objfile"><br>
               Format: 
-              <select  id="obj-file-format" class="file-format" name="format">
+              <select  id="obj_file_format" class="file-format" name="format">
                 <option value="json">JSON</option>
                 <option value="mniobj">MNI OBJ</option>
                 <option value="wavefrontobj">Wavefront OBJ</option>
                 <option value="freesurferasc">Freesurfer ASC</option>
               </select><br>
               <div class="format-hint"></div>
-              <div id="obj-file-submit-div" class="file-submit-div">
-                <span id="obj-file-submit" class="button file-submit">Load</span>
+              <div id="obj_file_submit_div" class="file-submit-div">
+                <span id="obj_file_submit" class="button file-submit">Load</span>
 	        <span id="clearshapes" class="button">Unload All</span>
               </div>
             </div>
@@ -87,9 +87,12 @@
                   <input type="checkbox"  id="autorotateZ" class="button"><label for="autorotateZ">Z</label>
                 </span>
               </div>
+             <div class="button-row">
+                <a class="button" id="toggle-axes">Toggle Axes</a>
+              </div>
               <div class="button-row">
                 <a class="button" id="resetview">Reset View</a>
-                <input type="checkbox" class="button" id="wireframe"><label for="wireframe">Wireframe</label>
+                <input type="checkbox" class="button" id="meshmode"><label for="wireframe">Wireframe</label>
               </div>
               <div class="button-row">
                 <input type="checkbox" class="button" id="threedee"><label for="threedee">3D Glasses!</label>

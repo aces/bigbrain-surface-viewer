@@ -293,24 +293,25 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
       var intersect_object;
 
       var vector = viewer.getVertex(searchindex); //find xyz coords of vertex number
-
       for (i = 0; i < model.children.length; i++) {
+        if ((model.children[i].name !== "axes") && (model.children[i].name !== "marker")){
 
-        var vertices = model.children[i].geometry.attributes.index.array;
-	var j;
+          var vertices = model.children[i].geometry.attributes.index.array;
+    	  var j;
 
- 	for (j = 0; j < vertices.length; j++) {
- 	  if (vertices[j] == searchindex){
-	    intersect_object = model.children[i];
-            searchindex = parseInt(searchindex);
-            vertex_data = {
-              index: searchindex,
-              point: vector,
-              object: intersect_object,
-            };
-	    break
-	  }
-  	}
+       	  for (j = 0; j < vertices.length; j++) {
+ 	    if (vertices[j] == searchindex){
+	      intersect_object = model.children[i];
+              searchindex = parseInt(searchindex);
+              vertex_data = {
+                index: searchindex,
+                point: vector,
+                object: intersect_object,
+              };
+	      break;
+  	    }
+    	  }
+        }
       }
     } else {	//if searching by shift-click (and not searchstring), find intersection
 
