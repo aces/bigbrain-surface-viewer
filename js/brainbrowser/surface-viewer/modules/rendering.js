@@ -541,6 +541,16 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
           inverse.getInverse(model.matrix);
           axis = new THREE.Vector3(0, 1, 0).applyMatrix4(inverse).normalize();
           model.rotateOnAxis(axis, dx / 150);
+
+          if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on") && (viewer.model.name !== "axes_on")){ //if axes have been activated and it's the model being rotated
+	    axesbox.model.rotation.x = viewer.model.rotation.x;
+	    axesbox.model.rotation.y = viewer.model.rotation.y;
+	    axesbox.model.rotation.z = viewer.model.rotation.z;
+	  } else if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on") && (viewer.model.name === "axes_on")){ //if axes have been activated and it's the axes being rotated
+            window.viewer.model.rotation.x = axesbox.model.rotation.x;
+            window.viewer.model.rotation.y = axesbox.model.rotation.y;
+            window.viewer.model.rotation.z = axesbox.model.rotation.z;            
+          }
         } else {
           multiplier = multiplier || 1.0;
           multiplier *= camera.position.z / default_camera_distance;

@@ -66,8 +66,10 @@ $(function() {
     var slider_backup = {};
     var searchindex= "" ;
     var marker = "";
-    var axes_length = 50;
+    var axes_length = 100;
     var current_count;
+    var legend_div = "";
+    var bgcolor = "black";
 
     // Add the three.js 3D anaglyph effect to the viewer.
     viewer.addEffect("AnaglyphEffect");
@@ -384,7 +386,12 @@ $(function() {
 
     // Set the background color.
     $("#clear_color").change(function(e){
-      viewer.setClearColor(parseInt($(e.target).val(), 16));
+
+      bgcolor = parseInt($(e.target).val(), 16);
+      viewer.setClearColor(bgcolor);
+      if (window.axesbox !== undefined){ 
+       axesbox.setClearColor(bgcolor);
+      }
     });
     
     // Reset to the default view.
@@ -702,6 +709,7 @@ $(function() {
           marker.name = "marker";
           viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
         }
+        axesbox.model.name = "axes_off";
       }
     });
 
@@ -1010,31 +1018,78 @@ $(function() {
     }
 
     function clearShape(name) {     
-      viewer.model.children.forEach(function(child,i) {
+      if (name === "axes"){
+        axesbox.model.children.forEach(function(child,i) {
 
-        if (child.name === name) {
-          viewer.model.children.splice(i);
-          viewer.updated = true;
-        }
-      });
+          if (child.name === name) {
+            axesbox.model.children.splice(i);
+            axesbox.updated = true;
+          }
+        });
+        document.getElementById("axes_legend").style.visibility = "hidden";
+        document.getElementById("axes").style.visibility = "hidden";
+      } else {
+        viewer.model.children.forEach(function(child,i) {
+
+          if (child.name === name) {
+            viewer.model.children.splice(i);
+            viewer.updated = true;
+          }
+        });
+      }
     }
 
     function buildAxes( length ) {
 
-      var axes = new THREE.Object3D();
-      var origin_y = -200;
+      var axes_all = new THREE.Object3D();
+      var origin_y = 0;
+//      var origin_y = -200;
 
-      axes.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( length, origin_y, 0 ), 0xFF0000, false ) ); // +X  		red solid = medial?
-      axes.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( -length, origin_y, 0 ), 0xFF0000, true) ); // -X 		red dashed = lateral?
-      axes.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, length + origin_y, 0 ), 0x00FF00, false ) ); // +Y    	green solid = dorsal?
-      axes.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, -length + origin_y, 0 ), 0x00FF00, true ) ); // -Y    	green dashed = ventral?
-      axes.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, length ), 0x0000FF, false ) ); // +Z    	blue solid = anterior?
-      axes.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, -length ), 0x0000FF, true ) ); // -Z    	blue dashed = posterior?
+      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( length, origin_y, 0 ), 0xFF0000, false ) ); // +X  		red solid = medial
+      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( -length, origin_y, 0 ), 0xFF0000, true) ); // -X 		red dashed = lateral
+      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, length + origin_y, 0 ), 0x00FF00, false ) ); // +Y    	green solid = anterior
+      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, -length + origin_y, 0 ), 0x00FF00, true ) ); // -Y    	green dashed = posterior
+      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, length ), 0x0000FF, false ) ); // +Z    	blue solid = dorsal
+      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, -length ), 0x0000FF, true ) ); // -Z    	blue dashed = ventral
 
-      axes.name = "axes";
-      viewer.model.add(axes);
+      axes_all.name = "axes";
+//      viewer.model.add(axes_all);
+//      viewer.updated = true;
 
-      viewer.updated = true;
+      if (window.axesbox === undefined){
+        window.axesbox = BrainBrowser.SurfaceViewer.start("axes", function(test) {
+	  axesbox.render();
+          axesbox.setClearColor(bgcolor);
+        });
+      } 
+
+      axesbox.model.add(axes_all);
+      axesbox.model.rotation.x = viewer.model.rotation.x;
+      axesbox.model.rotation.y = viewer.model.rotation.y;
+      axesbox.model.rotation.z = viewer.model.rotation.z;
+      axesbox.model.name = "axes_on";
+
+      if (legend_div === ""){
+
+        legend_div = $("<p class=\"alignleft\">dorsal</p><p class=\"alignright\"><canvas id=\"dorsal\"></canvas></p><div style=\"clear: both;\">" +
+          "<p class=\"alignleft\">ventral</p><p class=\"alignright\"><canvas id=\"ventral\"></canvas></p><div style=\"clear: both;\">" +
+          "<p class=\"alignleft\">anterior</p><p class=\"alignright\"><canvas id=\"anterior\"></canvas></p><div style=\"clear: both;\">" +
+          "<p class=\"alignleft\">posterior</p><p class=\"alignright\"><canvas id=\"posterior\"></canvas></p><div style=\"clear: both;\">" +
+          "<p class=\"alignleft\">lateral</p><p class=\"alignright\"><canvas id=\"lateral\"></canvas></p><div style=\"clear: both;\">" +
+          "<p class=\"alignleft\">medial</p><p class=\"alignright\"><canvas id=\"medial\"></canvas></p><div style=\"clear: both;\">");
+          legend_div.appendTo("#axes_legend");
+
+        drawDashed("dorsal","#0000ff",150);	//blue solid
+        drawDashed("ventral","#0000ff",8); 	//blue dashed
+        drawDashed("anterior","#00ff00",150);	//green solid
+        drawDashed("posterior","#00ff00",8);	//green dashed
+        drawDashed("lateral","#ff0000",150);	//red solid
+        drawDashed("medial","#ff0000",8);	//red dashed
+        document.getElementById("axes_legend").style.backgroundColor = "black";
+      } else {
+        document.getElementById("axes_legend").style.visibility = "visible";
+        document.getElementById("axes").style.visibility = "visible";
+      }
     }
 
     function buildAxis( src, dst, colorHex, dashed ) {
@@ -1054,6 +1109,22 @@ $(function() {
       var axis = new THREE.Line( geom, mat, THREE.LinePieces );
 
       return axis;
+    }
+
+    function drawDashed(name,color,width) {
+
+      var canvas = document.getElementById(name);
+      var context = canvas.getContext("2d");
+
+      context.beginPath();
+      context.moveTo(40, 70);
+      context.lineTo(190, 70);
+      context.lineWidth = 30;
+      context.setLineDash([width]);
+
+      // set line color
+      context.strokeStyle = color;
+      context.stroke();
     }
   });
 });

@@ -138,6 +138,53 @@ strong  {
   width: 100%;
 }
 
+#axes {
+  position: absolute;
+  left: 0px;
+  right: 0px;
+  top: 320px;
+  height: 90%;
+}
+
+#axes_legend {
+  position: absolute;
+  left: 0px;
+  right: 100px;
+  top: 620px;
+  height: 37%;
+  padding: 10px;
+}
+
+#dorsal {
+  height: 14px;
+  width: 90px;
+}
+
+#ventral {
+  height: 14px;
+  width: 90px;
+}
+
+#anterior {
+  height: 14px;
+  width: 90px;
+}
+
+#posterior {
+  height: 14px;
+  width: 90px;
+}
+
+#medial {
+  height: 14px;
+  width: 90px;
+}
+
+#lateral {
+  height: 14px;
+  width: 90px;
+}
+
 .box {
   background: #000000;
   padding: 10px;
