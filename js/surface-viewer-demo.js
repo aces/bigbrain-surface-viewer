@@ -389,8 +389,22 @@ $(function() {
 
       bgcolor = parseInt($(e.target).val(), 16);
       viewer.setClearColor(bgcolor);
-      if (window.axesbox !== undefined){ 
-       axesbox.setClearColor(bgcolor);
+
+      var font_color;
+      if ((bgcolor === 16777215) || (bgcolor === 16776960) ||  (bgcolor === 65535)){  // if white / yellow / cyan bg
+        font_color = "black";
+      } else {
+        font_color = "white";
+      }
+      document.getElementById("vertex-data").style.color = font_color;
+      if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){ 
+        document.getElementById("dorsal_legend").style.color = font_color;
+        document.getElementById("ventral_legend").style.color = font_color;
+        document.getElementById("anterior_legend").style.color = font_color;
+        document.getElementById("posterior_legend").style.color = font_color;
+        document.getElementById("left_legend").style.color = font_color;
+        document.getElementById("right_legend").style.color = font_color;
+        axesbox.setClearColor(0, 0);
       }
     });
     
@@ -1041,14 +1055,16 @@ $(function() {
 
     function buildAxes( length ) {
 
+      var font_color; 
       var axes_all = new THREE.Object3D();
+
       var origin_y = 0;
 //      var origin_y = -200;
 
-      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( length, origin_y, 0 ), 0xFF0000, false ) ); // +X  		red solid = medial
-      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( -length, origin_y, 0 ), 0xFF0000, true) ); // -X 		red dashed = lateral
-      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, length + origin_y, 0 ), 0x00FF00, false ) ); // +Y    	green solid = anterior
-      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, -length + origin_y, 0 ), 0x00FF00, true ) ); // -Y    	green dashed = posterior
+      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( length, origin_y, 0 ), 0xFF0000, false ) ); // +X  	red solid = right
+      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( -length, origin_y, 0 ), 0xFF0000, true) ); // -X 	red dashed = left
+      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, length + origin_y, 0 ), 0x00FF00, false ) ); // +Y    green solid = anterior
+      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, -length + origin_y, 0 ), 0x00FF00, true ) ); // -Y    green dashed = posterior
       axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, length ), 0x0000FF, false ) ); // +Z    	blue solid = dorsal
       axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, -length ), 0x0000FF, true ) ); // -Z    	blue dashed = ventral
 
@@ -1057,9 +1073,10 @@ $(function() {
 //      viewer.updated = true;
 
       if (window.axesbox === undefined){
-        window.axesbox = BrainBrowser.SurfaceViewer.start("axes", function(test) {
+        window.axesbox = BrainBrowser.SurfaceViewer.start("axes", function(axesbox) {
 	  axesbox.render();
-          axesbox.setClearColor(bgcolor);
+          axesbox.setClearColor(0, 0);
+          axesbox.updated = true;
         });
       } 
 
@@ -1068,28 +1085,39 @@ $(function() {
       axesbox.model.rotation.y = viewer.model.rotation.y;
       axesbox.model.rotation.z = viewer.model.rotation.z;
       axesbox.model.name = "axes_on";
+      axesbox.setClearColor(0, 0);
 
       if (legend_div === ""){
 
-        legend_div = $("<p class=\"alignleft\">dorsal</p><p class=\"alignright\"><canvas id=\"dorsal\"></canvas></p><div style=\"clear: both;\">" +
-          "<p class=\"alignleft\">ventral</p><p class=\"alignright\"><canvas id=\"ventral\"></canvas></p><div style=\"clear: both;\">" +
-          "<p class=\"alignleft\">anterior</p><p class=\"alignright\"><canvas id=\"anterior\"></canvas></p><div style=\"clear: both;\">" +
-          "<p class=\"alignleft\">posterior</p><p class=\"alignright\"><canvas id=\"posterior\"></canvas></p><div style=\"clear: both;\">" +
-          "<p class=\"alignleft\">lateral</p><p class=\"alignright\"><canvas id=\"lateral\"></canvas></p><div style=\"clear: both;\">" +
-          "<p class=\"alignleft\">medial</p><p class=\"alignright\"><canvas id=\"medial\"></canvas></p><div style=\"clear: both;\">");
+        legend_div = $("<div id=\"dorsal_legend\"><p class=\"alignleft\">dorsal</div></p><p class=\"alignright\"><canvas id=\"dorsal\"></canvas></p><div style=\"clear: both;\">" +
+          "<div id=\"ventral_legend\"><p class=\"alignleft\">ventral</div></p></font><p class=\"alignright\"><canvas id=\"ventral\"></canvas></p><div style=\"clear: both;\">" +
+          "<div id=\"anterior_legend\"><p class=\"alignleft\">anterior</div></p></font><p class=\"alignright\"><canvas id=\"anterior\"></canvas><p><div style=\"clear: both;\">" +
+          "<div id=\"posterior_legend\"<p class=\"alignleft\">posterior</div></p></font><p class=\"alignright\"><canvas id=\"posterior\"></canvas></p><div style=\"clear: both;\">" +
+          "<div id=\"left_legend\"<p class=\"alignleft\">left</div></p></font><p class=\"alignright\"><canvas id=\"left\"></canvas></p><div style=\"clear: both;\">" +
+          "<div id=\"right_legend\"<p class=\"alignleft\">right</div></p></font><p class=\"alignright\"><canvas id=\"right\"></canvas></p><div style=\"clear: both;\">");
           legend_div.appendTo("#axes_legend");
 
         drawDashed("dorsal","#0000ff",150);	//blue solid
         drawDashed("ventral","#0000ff",8); 	//blue dashed
         drawDashed("anterior","#00ff00",150);	//green solid
         drawDashed("posterior","#00ff00",8);	//green dashed
-        drawDashed("lateral","#ff0000",150);	//red solid
-        drawDashed("medial","#ff0000",8);	//red dashed
-        document.getElementById("axes_legend").style.backgroundColor = "black";
+        drawDashed("right","#ff0000",150);	//red solid
+        drawDashed("left","#ff0000",8);		//red dashed
       } else {
         document.getElementById("axes_legend").style.visibility = "visible";
         document.getElementById("axes").style.visibility = "visible";
       }
+      if ((bgcolor === 16777215) || (bgcolor === 16776960) ||  (bgcolor === 65535)){  // if white / yellow / cyan bg
+        font_color = "black";
+      } else {
+        font_color = "white";
+      }
+        document.getElementById("dorsal_legend").style.color = font_color;
+        document.getElementById("ventral_legend").style.color = font_color;
+        document.getElementById("anterior_legend").style.color = font_color;
+        document.getElementById("posterior_legend").style.color = font_color;
+        document.getElementById("left_legend").style.color = font_color;
+        document.getElementById("right_legend").style.color = font_color;
     }
 
     function buildAxis( src, dst, colorHex, dashed ) {

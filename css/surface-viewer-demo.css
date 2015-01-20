@@ -144,12 +144,14 @@ strong  {
   right: 0px;
   top: 330px;
   height: 90%;
+  width: 80%;
+  background: rgba(0, 0, 0, 0);
 }
 
 #axes_legend {
   position: absolute;
   left: 0px;
-  right: 100px;
+  right: 80px;
   top: 620px;
   height: 37%;
   padding: 10px;
@@ -175,12 +177,12 @@ strong  {
   width: 90px;
 }
 
-#medial {
+#left {
   height: 14px;
   width: 90px;
 }
 
-#lateral {
+#right {
   height: 14px;
   width: 90px;
 }
@@ -347,13 +349,13 @@ div#format-hints {
   left: 15px;
   top: 145px;
   padding: 5px;
-  background-color: white;
+  background-color: transparent;
   z-index: 9;
 }
 
 #vertex-data {
-  background-color: #000000;
-  color: #FFFFFF;
+  background-color: transparent;
+  color: white;
   font-weight: bold;
   padding: 1em;
 }

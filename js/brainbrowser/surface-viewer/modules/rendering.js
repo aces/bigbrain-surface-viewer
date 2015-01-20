@@ -30,7 +30,10 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
   
   var THREE = BrainBrowser.SurfaceViewer.THREE;
   
-  var renderer = new THREE.WebGLRenderer({ preserveDrawingBuffer: true });
+  var renderer = new THREE.WebGLRenderer({ 
+    preserveDrawingBuffer: true,
+    alpha: true 
+  });
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(30, viewer.dom_element.offsetWidth / viewer.dom_element.offsetHeight, 1, 3000);
   var default_camera_distance = 500;
@@ -216,8 +219,8 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
   * viewer.setClearColor(0xFF0000);
   * ```
   */
-  viewer.setClearColor = function(color)  {
-    renderer.setClearColor(color, 1.0);
+  viewer.setClearColor = function(color, alpha)  {
+    renderer.setClearColor(color, alpha);//1.0);
 
     viewer.updated = true;
   };
