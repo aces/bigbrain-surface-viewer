@@ -26,27 +26,8 @@
           (powered by <a href="https://brainbrowser.cbrain.mcgill.ca/" target="_blank">BrainBrowser</a>)</small>
       </h1>
       <a id="control-button" class="button">Hide Controls</a>
-      <span id="forkongithub"><a href="https://github.com/aces/brainbrowser">Fork me on GitHub</a></span>
       <div id="vertex-data-wrapper">
         <div id="vertex-data">
-          <h3>Select a point on the surface<BR>(shift-click or touch)</h3>
-          <div>Shape name: <span id="pick-name" class="pick-data"></span></div>
-          <div>Shape number: <span id="pick-shape-number" class="pick-data"></span></div>
-          <div>X: <span id="pick-x" class="pick-data"></span></div>
-          <div>Y: <span id="pick-y" class="pick-data"></span></div>
-          <div>Z: <span id="pick-z" class="pick-data"></span></div>
-          <div>Vertex number: <span id="pick-index" class="pick-data"></span></div>
-	<br>
-          <span id="focus-shape" class="button">Focus / Unfocus This Shape</span>
-          <div style="margin-top:20px;">
-          <div class="ui-widget">
-          <input id="searchshapes" type="text" placeholder="Search Shapes">
-          </div>
-          <div class="button-row">
-          <a class="button" id="gosearch">Go!</a>
-          <a class="button" id="clearsearch">Clear</a>
-          </div>
-          </div>
           <div id="axes"></div>
         </div>
         <div id="axes_legend"></div>
@@ -79,53 +60,37 @@
             </div>
           </div>
           <div class="combo-box">
-            <div id="views" class="box full-box bordered-box" >
-              <h4>View:</h4>
+            <div id="views" class="box full-box" >
+              Background Color:
+              <select id="clear_color">
+                <option value="0x000000">Black</option>
+                <option value="0x888888">Gray</option>
+                <option value="0xffffff">White</option>
+                <option value="0xff0000">Red</option>
+                <option value="0x00ff00">Green</option>
+                <option value="0x0000ff">Blue</option>
+                <option value="0x00ffff">Cyan</option>
+                <option value="0xff00ff">Magenta</option>
+                <option value="0xffff00">Yellow</option>
+              </select>
               <div class="button-row">
                 Autorotate: 
                 <span id="autorotate-controls" class="buttonset">
-                  <input type="checkbox"  id="autorotateX" class="button"><label for="autorotateX">X</label>
-                  <input type="checkbox"  id="autorotateY" class="button"><label for="autorotateY">Y</label>
-                  <input type="checkbox"  id="autorotateZ" class="button"><label for="autorotateZ">Z</label>
+                  <input type="checkbox" id="autorotateX" class="icon"><label for="autorotateX">X</label>
+                  <input type="checkbox" id="autorotateY" class="icon"><label for="autorotateY">Y</label>
+                  <input type="checkbox" id="autorotateZ" class="icon"><label for="autorotateZ">Z</label>
                 </span>
               </div>
-             <div class="button-row">
-                <a class="button" id="toggle-axes">Toggle Axes</a>
-              </div>
               <div class="button-row">
-                <a class="button" id="resetview">Reset View</a>
-                <input type="checkbox" class="button" id="meshmode"><label for="wireframe">Wireframe</label>
-              </div>
-              <div class="button-row">
-                <input type="checkbox" class="button" id="threedee"><label for="threedee">3D Glasses!</label>
-                <span id="screenshot" class="button">Screenshot</span>
-              </div>
-              <div class="button-row">
-                <a class="button" id="toggleopacitycustom">Toggle Opacity On/Custom</a>
-              </div>
-              <div class="button-row">
-                <a class="button" id="toggleopacityonoff">Toggle Opacity On/Off</a>
-              </div>
-            </div>
-            <div id="shape-cell" class="box full-box bordered-box">
-              <div id="shapes">
+                <span title="Axes"><input type="checkbox" class="icon" id="toggle-axes"><label for="toggle-axes"><img src="img/axes_icon.png"></label></span>
+                <span title="Reset view"><a class="icon" id="resetview"><img src="img/reset_icon.png"></a></span>
+                <span title="Wireframe"><input type="checkbox" class="icon" id="meshmode"><label for="meshmode"><img src="img/wireframe_icon.png"></label></span>
+                <span title="3D glasses!"><input type="checkbox" class="icon" id="threedee"><label for="threedee"><img src="img/3Dglasses_icon.png"></label></span>
+                <span title="Screenshot"><a class="icon" id="screenshot"><img src="img/screenshot_icon.png"></a></span>
+                <span title="Opacity On/Custom"><input type="checkbox" class="icon" id="toggleopacitycustom"><label for="toggleopacitycustom"><img src="img/toggle_opacity_icon.png"></label></span><br><br>
               </div>
             </div>
           </div>        
-          <div id="background-select" class="box full-box">
-            <h4>Background Color:</h4>
-            <select id="clear_color"> 
-              <option value="0x000000">Black</option>
-              <option value="0x888888">Gray</option>
-              <option value="0xffffff">White</option>
-              <option value="0xff0000">Red</option>
-              <option value="0x00ff00">Green</option>
-              <option value="0x0000ff">Blue</option>
-              <option value="0x00ffff">Cyan</option>
-              <option value="0xff00ff">Magenta</option>
-              <option value="0xffff00">Yellow</option>
-            </select>
-          </div>
         </div>
       </div>
     </div>

@@ -15,45 +15,55 @@
   color: #F0F0F0;
 }
 
-.button:hover {
-  background-color: #3EAFFF;
-}
-
-.button:active {
-  background-color: orange;
-}
-
-input[type=checkbox].button {
-  display: none;
-}
-
-input[type=checkbox].button + label {
+.icon {
   display: inline-block;
   cursor: pointer;
   font-size: 14px;
   font-weight: bold;
-  padding: 0.5em 1em;
+  padding: 0.3em 0.3em;
   background-color: #1E8FFF;
   color: #F0F0F0;
 }
 
-input[type=checkbox].button + label:hover {
+.icon:hover {
+  background-color: #3EAFFF;
+}
+
+.icon:active {
+  background-color: orange;
+}
+
+input[type=checkbox].icon {
+  display: none;
+}
+
+input[type=checkbox].icon + label {
+  display: inline-block;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 0.3em 0.3em;
+  background-color: #1E8FFF;
+  color: #F0F0F0;
+}
+
+input[type=checkbox].icon + label:hover {
   background-color: #5ECFFF;
 }
 
-input[type=checkbox].button + label:active {
+input[type=checkbox].icon + label:active {
   background-color: orange;
 }
 
-input[type=checkbox].button:checked + label {
+input[type=checkbox].icon:checked + label {
   background-color: orange;
 }
 
-input[type=checkbox].button:checked + label:hover {
+input[type=checkbox].icon:checked + label:hover {
   background-color: #FFC520;
 }
 
-input[type=checkbox].button:checked + label:active {
+input[type=checkbox].icon:checked + label:active {
   background-color: #1E8FFF;
 }
 
@@ -112,3 +122,4 @@ input[type=checkbox].button:checked + label:active {
   bottom: 1px;
   top: auto;
 }
+

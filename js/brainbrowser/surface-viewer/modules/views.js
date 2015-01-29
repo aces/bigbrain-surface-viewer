@@ -111,7 +111,7 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
       material = shape.material;
       material.opacity = alpha;
       
-      if (alpha === 1) {
+      if ((alpha === 1) || (alpha > 1)) {
         material.transparent = false;
       } else {
         material.transparent = true;

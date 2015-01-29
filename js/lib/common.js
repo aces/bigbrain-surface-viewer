@@ -38,7 +38,7 @@ $(function() {
         controls.animate({height: 30}, 300).animate({width: 0}, 200, function() { controls.hide(); });
         button.text("Show Controls");
       } else {
-        controls.show().animate({width: 320}, 200).animate({height: "70%"}, 300);
+        controls.show().animate({width: 370}, 200).animate({height: "90%"}, 300);
         button.text("Hide Controls");
       }
     }

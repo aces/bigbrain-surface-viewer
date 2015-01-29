@@ -60,8 +60,7 @@ $(function() {
     var autoshapes  = [];
     var select_mode = "none";
     var focus_toggle = "off";
-    var opacity_toggle_custom = "off";
-    var opacity_toggle_onoff = "on";
+    var opacity_toggle_custom = "on";
     var axes_toggle = "off";
     var slider_backup = {};
     var searchindex= "" ;
@@ -86,6 +85,31 @@ $(function() {
     // for each shape that makes up the model.
     viewer.addEventListener("displaymodel", function(event) {
 
+
+      var select_div = $("<div id=\"select-cell\" class=\"box full-box bordered-box\"><div id=\"select\">" +
+	"<h3>Select a point on the surface<BR>(shift-click or touch)</h3>" +
+        "<div>Shape name: <span id=\"pick-name\" class=\"pick-data\"></span></div>" +
+        "<div>Shape number: <span id=\"pick-shape-number\" class=\"pick-data\"></span></div>" +
+        "<div>X: <span id=\"pick-x\" class=\"pick-data\"></span></div>" +
+        "<div>Y: <span id=\"pick-y\" class=\"pick-data\"></span></div>" +
+        "<div>Z: <span id=\"pick-z\" class=\"pick-data\"></span></div>" +
+        "<div>Vertex number: <span id=\"pick-index\" class=\"pick-data\"></span></div><br>" +
+        "<span id=\"focus-shape\" class=\"button\">Focus / Unfocus This Shape</span>" +
+        "<div style=\"margin-top:20px;\">" +
+        "<div class=\"ui-widget\">" +
+        "<input id=\"searchshapes\" type=\"text\" placeholder=\"Search Shapes\">" +
+        "</div>" +
+        "<div class=\"button-row\">" +
+        "<a class=\"button\" id=\"gosearch\">Go!</a>" +
+        "<a class=\"button\" id=\"clearsearch\">Clear</a>" +
+        "</div>" +
+        "</div>" +
+        "</div></div>");
+      select_div.appendTo("#views");
+
+      var shapes_div = $("<div class=\"shape-cell\"><br><div id=\"shapes\"></div></div>");
+      shapes_div.appendTo("#select-cell");
+
       var slider, slider_div, slider_div_end;
       var children = event.model_data.shapes;
       current_count = $("#shapes").children().length;
@@ -93,7 +117,8 @@ $(function() {
         children.slice(current_count).forEach(function(shape, i) {
           slider_div = $("<div id=\"shape-" + i + "\" class=\"shape\">" +
             "<h4> <p class=\"alignleft\"> Shape " + (i + 1 + current_count) + "</p></h4>" + 
-	    "<div id=\"top-" + i + "\" style=\"visibility: hidden\"><a href=\"#surface_choice\"><p class=\"alignright\">back to top</a></p></div><br />" +
+	    "<div id=\"top-" + i + "\" style=\"visibility: hidden\"><p class=\"alignright\">" + 
+            "<input type=\"button\" onClick=\"window.location.hash='#shape-0';window.location.hash='#views'\" value=\"back to top\"/></p></div><br />" +
             "<div style=\"clear: both;\">" +
             "Name: " + shape.name + "<br />" +
             "<p class=\"alignleft\"> Opacity: </p></div>");
@@ -101,14 +126,13 @@ $(function() {
 	  slider_div_end = $("<p class=\"alignright\"><a class=\"button\" id=\"individualtoggleopacity" +  i + "\">On</a></p>");
           slider.slider({
             value: 100,
-            min: -1,
-            max: 101,
-            slide: function(event) {
+            min: 0,
+            max: 100,
+            slide: function(event, ui) {
               var target = event.target;
               var shape_name = $(target).attr('data-shape-name');
-              var alpha = $(target).slider('value');
+              var alpha = ui.value;
               alpha = Math.min(100, Math.max(0, alpha)) / 100.0;
-
               viewer.setTransparency(alpha, {
                 shape_name: shape_name
               });
@@ -150,6 +174,141 @@ $(function() {
         source: autoshapes
       }).autocomplete("widget").addClass("fixed-height");
       current_count = $("#shapes").children().length;
+
+      $("#gosearch").click(function() {
+
+        clearShape("marker");
+
+        if ((searchshapes.value !== "") && (!/^\d+$/.test(searchshapes.value))){  //Only do the following if string is not blank & contains some text (i.e. not strictly numeric)
+
+          $("#pick-name").html("");
+          $("#pick-shape-number").html("");
+          $("#pick-x").html("");
+          $("#pick-y").html("");
+          $("#pick-z").html("");
+          $("#pick-index").html("");
+
+          viewer.model.children.forEach(function(child, i) {
+            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+              if (child.name == searchshapes.value) {
+                searchindex = child.name;
+                $("#pick-shape-number").html(i+1);
+                $("#pick-name").html(child.name);
+                window.location.hash = "#shape-" + i;
+                window.location.hash = "#views";
+                document.getElementById("shape-" + i).style.backgroundColor = "#1E8FFF";
+                document.getElementById("top-" + i).style.visibility = "visible";
+                viewer.setTransparency(1, {shape_name: child.name});
+                $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+                $("#individualtoggleopacity" + i).html("On");
+              } else {   //focus selected object, no need for shift-click
+                document.getElementById("shape-" + i).style.backgroundColor = "black";
+                document.getElementById("top-" + i).style.visibility = "hidden";
+                slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+                viewer.setTransparency(0, {shape_name: child.name});
+                $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+                $("#individualtoggleopacity" + i).html("Off");
+              }
+            }
+          });
+          marker = "";
+        } else if ((searchshapes.value !== "") && (/^\d+$/.test(searchshapes.value)))  {  // If strictly numeric, search by vertex number
+
+          searchindex = searchshapes.value;
+          pick(viewer.x, viewer.y, slider_backup, searchindex);   //viewer.x and viewer.y are irrelevant and overwritten
+
+          viewer.model.children.forEach(function(child, i) {
+            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+              if (child.name == picked_object.name) {
+                window.location.hash = "#shape-" + i;
+                window.location.hash = "#views";
+                document.getElementById("shape-" + i).style.backgroundColor = "#1E8FFF";
+                document.getElementById("top-" + i).style.visibility = "visible";
+                viewer.setTransparency(1, {shape_name: child.name});
+                $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+                $("#individualtoggleopacity" + i).html("On");
+              } else {   //focus selected object, no need for shift-click
+                document.getElementById("shape-" + i).style.backgroundColor = "black";
+                document.getElementById("top-" + i).style.visibility = "hidden";
+                slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+                viewer.setTransparency(0, {shape_name: child.name});
+                $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+                $("#individualtoggleopacity" + i).html("Off");
+              }
+            }
+          });
+          searchindex = picked_object.name;
+          marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+          marker.name = "marker";
+          viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+        }
+        focus_toggle = "on";
+        select_mode = "search";
+      });
+
+      // If Search box "Clear" button pressed
+      $("#clearsearch").click(function() {
+        clearShape("marker");
+        document.getElementById("searchshapes").value="";
+        viewer.model.children.forEach(function(child, i) {
+          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+            window.location.hash = "#shape-0";
+            window.location.hash = "#surface-choice";
+            document.getElementById("shape-" + i).style.backgroundColor = "black";
+            document.getElementById("top-" + i).style.visibility = "hidden";
+            viewer.setTransparency(1, {shape_name: child.name});
+            $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+          }
+        });
+      focus_toggle = "off";
+      searchshapes.value="";
+      searchindex = "";
+      $("#pick-name").html("");
+      $("#pick-shape-number").html("");
+      $("#pick-x").html("");
+      $("#pick-y").html("");
+      $("#pick-z").html("");
+      $("#pick-index").html("");
+      });
+
+      $("#focus-shape").click(function(event) {
+        var name;
+
+        if (select_mode === "click"){
+          name = $("#pick-name").html();
+        } else if (select_mode === "search"){
+          name = searchindex;
+        } else {
+          return;
+        }
+
+        if (focus_toggle == "off"){
+          viewer.model.children.forEach(function(child,i) {
+            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+              if ((child.name !== name) && (i < ($("#shapes").children().length))) {
+                slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+                viewer.setTransparency(0, {shape_name: child.name});
+                $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+                $("#individualtoggleopacity" + i).html("Off");
+              }
+            }
+          });
+        focus_toggle = "on";
+        } else if (focus_toggle == "on"){
+          viewer.model.children.forEach(function(child,i) {
+            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+              if (child.name !== name){
+
+                var alpha = slider_backup[child.name] / 100;
+                viewer.setTransparency(alpha, {shape_name: child.name});
+                $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
+                $("#individualtoggleopacity" + i).html("On");
+              }
+            }
+          });
+          focus_toggle = "off";
+        }
+      });
     });
 
     // When the screen is cleared, remove all UI related
@@ -178,11 +337,11 @@ $(function() {
       select_mode = "none";
       focus_toggle = "off";
       opacity_toggle_custom = "off";
-      opacity_toggle_onoff = "on";
       axes_toggle="off";
       searchindex= "";
       clearShape("marker");
       clearShape("axes");
+      $( ".legend" ).empty();
     });
 
     // When the intensity range changes, adjust the displayed spectrum.
@@ -398,13 +557,9 @@ $(function() {
       }
       document.getElementById("vertex-data").style.color = font_color;
       if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){ 
-        document.getElementById("dorsal_legend").style.color = font_color;
-        document.getElementById("ventral_legend").style.color = font_color;
-        document.getElementById("anterior_legend").style.color = font_color;
-        document.getElementById("posterior_legend").style.color = font_color;
-        document.getElementById("left_legend").style.color = font_color;
-        document.getElementById("right_legend").style.color = font_color;
-        axesbox.setClearColor(0, 0);
+        $( ".legend" ).empty();
+        clearShape("axes");
+        var axes = buildAxes( axes_length );
       }
     });
     
@@ -436,173 +591,33 @@ $(function() {
     // Toggle opacity (custom vs. on).
     $("#toggleopacitycustom").click(function() {
 
-      if (  opacity_toggle_custom == "on") {
+      if (  opacity_toggle_custom == "custom") {
         viewer.model.children.forEach(function(child,i) {
           if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
             var alpha = slider_backup[child.name] / 100;
             viewer.setTransparency(alpha, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
-            $("#individualtoggleopacity" + i).html("On");
-            document.getElementById("opacity-slider" + i).style.visibility = "visible";
           }
 	}); 
         if (marker !== ""){
-          marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
-          marker.name = "marker";
           viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
         }
-	opacity_toggle_custom = "off";
-        } else {
-          clearShape("marker");
-          viewer.model.children.forEach(function(child,i) {
-            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){ 
-              slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
-              viewer.setTransparency(0, {shape_name: child.name});
-              $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
-              $("#individualtoggleopacity" + i).html("Off");
-              document.getElementById("opacity-slider" + i).style.visibility = "hidden";
-            }
-          });
 	opacity_toggle_custom = "on";
-        if ((viewer.model.children.length < current_count+1) && (axes_toggle === "on")){
-          var axes = buildAxes( axes_length );
+      } else if (  opacity_toggle_custom == "on"){
+        if (marker !== ""){
+          viewer.setTransparency(1, {shape_name: "marker"});
         }
-      }
-    });
 
-    // Toggle opacity (on vs. off).
-    $("#toggleopacityonoff").click(function() {
-
-      if (  opacity_toggle_onoff == "off"){
         viewer.model.children.forEach(function(child,i) {
-          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
-
+          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){ 
+            slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
             viewer.setTransparency(1, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
             $("#individualtoggleopacity" + i).html("On");
-            document.getElementById("opacity-slider" + i).style.visibility = "visible";
-          }
+            document.getElementById("opacity-slider" + i).style.visibility = "visible";           }
         });
-        if (marker !== ""){
-          marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
-          marker.name = "marker";
-          viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
-        }
-        opacity_toggle_onoff = "on";
-      } else {
-        clearShape("marker");
-        viewer.model.children.forEach(function(child,i) {
-          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
-            viewer.setTransparency(0, {shape_name: child.name});
-            $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
-            $("#individualtoggleopacity" + i).html("Off");
-            document.getElementById("opacity-slider" + i).style.visibility = "hidden";
-          }
-	});
-	opacity_toggle_onoff = "off";
-        if ((viewer.model.children.length < current_count+1) && (axes_toggle === "on")){
-          var axes = buildAxes( axes_length );
-	}
+	opacity_toggle_custom = "custom";
       }
-    });
-
-    // If Search box "Go" button pressed
-
-    $("#gosearch").click(function() {
-
-      clearShape("marker");
-
-      if ((searchshapes.value !== "") && (!/^\d+$/.test(searchshapes.value))){  //Only do the following if string is not blank & contains some text (i.e. not strictly numeric)
-
-        $("#pick-name").html("");
-        $("#pick-shape-number").html("");
-        $("#pick-x").html("");
-        $("#pick-y").html("");
-        $("#pick-z").html("");
-        $("#pick-index").html("");
-
-        viewer.model.children.forEach(function(child, i) {
-          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
-     	    if (child.name == searchshapes.value) {
-              searchindex = child.name;
-              $("#pick-shape-number").html(i+1);
-  	      $("#pick-name").html(child.name);
-       	      window.location.hash = "#" + "shape-" + i;
-	      document.getElementById("shape-" + i).style.backgroundColor = "#1E8FFF";
-	      document.getElementById("top-" + i).style.visibility = "visible";
-              viewer.setTransparency(1, {shape_name: child.name});
-              $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
-              $("#individualtoggleopacity" + i).html("On");
-  	    } else {   //focus selected object, no need for shift-click
-	      document.getElementById("shape-" + i).style.backgroundColor = "black";
-	      document.getElementById("top-" + i).style.visibility = "hidden";
-	      slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
-              viewer.setTransparency(0, {shape_name: child.name});
-              $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
-              $("#individualtoggleopacity" + i).html("Off");
-            }
-	  }
-        });
-	marker = "";
-      } else if ((searchshapes.value !== "") && (/^\d+$/.test(searchshapes.value)))  {  // If strictly numeric, search by vertex number
-
-        searchindex = searchshapes.value;	  
-        pick(viewer.x, viewer.y, slider_backup, searchindex);	//viewer.x and viewer.y are irrelevant and overwritten
-
-	viewer.model.children.forEach(function(child, i) {
-          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
-            if (child.name == picked_object.name) {
-              window.location.hash = "#" + "shape-" + i;
-              document.getElementById("shape-" + i).style.backgroundColor = "#1E8FFF";
-              document.getElementById("top-" + i).style.visibility = "visible";
-              viewer.setTransparency(1, {shape_name: child.name});
-              $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
-              $("#individualtoggleopacity" + i).html("On");
-            } else {   //focus selected object, no need for shift-click
-              document.getElementById("shape-" + i).style.backgroundColor = "black";
-              document.getElementById("top-" + i).style.visibility = "hidden";
-              slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
-              viewer.setTransparency(0, {shape_name: child.name});
-              $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
-              $("#individualtoggleopacity" + i).html("Off");
-  	    }
-          }
-        });
-        searchindex = picked_object.name;
-        if ((viewer.model.children.length < current_count+1) && (axes_toggle === "on")){
-          var axes = buildAxes( axes_length );
-        }
-        marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
-        marker.name = "marker";
-        viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
-      }
-      focus_toggle = "on";
-      select_mode = "search";
-    });
-
-    // If Search box "Clear" button pressed
-    $("#clearsearch").click(function() {
-      clearShape("marker");
-      document.getElementById("searchshapes").value="";
-      viewer.model.children.forEach(function(child, i) {
-        if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
-	  window.location.hash = "#shape-0";
-          window.location.hash = "#surface-choice";
-          document.getElementById("shape-" + i).style.backgroundColor = "black";
-          document.getElementById("top-" + i).style.visibility = "hidden";
-          viewer.setTransparency(1, {shape_name: child.name});
-          $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
-        }
-      });
-    focus_toggle = "off";
-    searchshapes.value="";
-    searchindex = "";
-    $("#pick-name").html("");
-    $("#pick-shape-number").html("");
-    $("#pick-x").html("");
-    $("#pick-y").html("");
-    $("#pick-z").html("");
-    $("#pick-index").html("");
     });
 
     // Set the visibility of the currently loaded model.
@@ -716,6 +731,7 @@ $(function() {
         var axes = buildAxes( axes_length );
         axes_toggle = "on";
       } else{
+        $( ".legend" ).empty();
         clearShape("axes");
 	axes_toggle = "off";
         if (marker !== ""){
@@ -745,6 +761,7 @@ $(function() {
       current_request = 0;
       current_request_name = "";
       loading_div.hide();
+      $( ".shape-cell" ).empty();
     });
 
     $("#brainbrowser").click(function(event) {
@@ -765,15 +782,13 @@ $(function() {
       if (picked_object === null) {
         marker="";
         clearShape("marker");
-//        if (axes_toggle === "on"){
-//          var axes = buildAxes( axes_length );
- //       }
         return;
       } else {
         viewer.model.children.forEach(function(child, i) {
           if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
             if (child.name == picked_object.name) {
-              window.location.hash = "#" + "shape-" + i;
+              window.location.hash = "#shape-" + i;
+              window.location.hash = "#views";
               document.getElementById("shape-" + i).style.backgroundColor = "#1E8FFF";
               document.getElementById("top-" + i).style.visibility = "visible";
             } else {   //focus selected object, no need for shift-click
@@ -788,45 +803,6 @@ $(function() {
       viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
       select_mode = "click";
       focus_toggle = "off";
-    });
-
-    $("#focus-shape").click(function(event) {
-      var name;
-
-	if (select_mode === "click"){ 
-      	  name = $("#pick-name").html();
-	} else if (select_mode === "search"){
-      	  name = searchindex;
-	} else {
-	  return;
-	}
-
-	if (focus_toggle == "off"){
-      	  viewer.model.children.forEach(function(child,i) {
-            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
-	      if ((child.name !== name) && (i < ($("#shapes").children().length))) {
-                slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
-    	        viewer.setTransparency(0, {shape_name: child.name});
-                $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
-	        $("#individualtoggleopacity" + i).html("Off");
-              }
-            }
-      	  });
-	focus_toggle = "on";
-	} else if (focus_toggle == "on"){
-          viewer.model.children.forEach(function(child,i) {
-            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
-              if (child.name !== name){
-
-                var alpha = slider_backup[child.name] / 100;
-                viewer.setTransparency(alpha, {shape_name: child.name});
-                $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
-                $("#individualtoggleopacity" + i).html("On");
-              }
-            }
-          });
-        focus_toggle = "off";
-	}
     });
 
     // Load a new model from a file that the user has
@@ -1032,7 +1008,7 @@ $(function() {
     }
 
     function clearShape(name) {     
-      if (name === "axes"){
+      if ((name === "axes") && (window.axesbox !== undefined)){
         axesbox.model.children.forEach(function(child,i) {
 
           if (child.name === name) {
@@ -1040,8 +1016,6 @@ $(function() {
             axesbox.updated = true;
           }
         });
-        document.getElementById("axes_legend").style.visibility = "hidden";
-        document.getElementById("axes").style.visibility = "hidden";
       } else {
         viewer.model.children.forEach(function(child,i) {
 
@@ -1061,12 +1035,30 @@ $(function() {
       var origin_y = 0;
 //      var origin_y = -200;
 
-      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( length, origin_y, 0 ), 0xFF0000, false ) ); // +X  	red solid = right
-      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( -length, origin_y, 0 ), 0xFF0000, true) ); // -X 	red dashed = left
-      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, length + origin_y, 0 ), 0x00FF00, false ) ); // +Y    green solid = anterior
-      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, -length + origin_y, 0 ), 0x00FF00, true ) ); // -Y    green dashed = posterior
-      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, length ), 0x0000FF, false ) ); // +Z    	blue solid = dorsal
-      axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, -length ), 0x0000FF, true ) ); // -Z    	blue dashed = ventral
+
+      if (bgcolor !== 16711680){
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( length, origin_y, 0 ), 0xFF0000, false ) ); // +X  	red solid = right
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( -length, origin_y, 0 ), 0xFF0000, true) ); // -X 	red dashed = left
+      } else {
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( length, origin_y, 0 ), 0x000000, false ) ); // +X      black solid = right
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( -length, origin_y, 0 ), 0x000000, true) ); // -X       black dashed = left
+      }
+
+      if (bgcolor !== 65280){
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, length + origin_y, 0 ), 0x00FF00, false ) ); // +Y  green solid = anterior
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, -length + origin_y, 0 ), 0x00FF00, true ) ); // -Y  green dashed = posterior
+      } else {
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, length + origin_y, 0 ), 0x000000, false ) ); // +X  black solid = anterior
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, -length + origin_y, 0 ), 0x000000, true) ); // -X   black dashed = posterior
+      }
+
+      if (bgcolor !== 255){
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, length ), 0x0000FF, false ) ); // +Z    	blue solid = dorsal
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, -length ), 0x0000FF, true ) ); // -Z    	blue dashed = ventral
+      } else {
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, length ), 0x000000, false ) ); // +X      black solid = dorsal
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, -length ), 0x000000, true) ); // -X       black dashed = ventral
+      }
 
       axes_all.name = "axes";
 //      viewer.model.add(axes_all);
@@ -1087,26 +1079,36 @@ $(function() {
       axesbox.model.name = "axes_on";
       axesbox.setClearColor(0, 0);
 
-      if (legend_div === ""){
+      legend_div = $("<div class=\"legend\"><div id=\"dorsal_legend\"><p class=\"alignleft\">dorsal</div></p><p class=\"alignright\"><canvas id=\"dorsal\"></canvas></p><div style=\"clear: both;\">" +
+        "<div id=\"ventral_legend\"><p class=\"alignleft\">ventral</div></p></font><p class=\"alignright\"><canvas id=\"ventral\"></canvas></p><div style=\"clear: both;\">" +
+        "<div id=\"anterior_legend\"><p class=\"alignleft\">anterior</div></p></font><p class=\"alignright\"><canvas id=\"anterior\"></canvas><p><div style=\"clear: both;\">" +
+        "<div id=\"posterior_legend\"<p class=\"alignleft\">posterior</div></p></font><p class=\"alignright\"><canvas id=\"posterior\"></canvas></p><div style=\"clear: both;\">" +
+        "<div id=\"left_legend\"<p class=\"alignleft\">left</div></p></font><p class=\"alignright\"><canvas id=\"left\"></canvas></p><div style=\"clear: both;\">" +
+        "<div id=\"right_legend\"<p class=\"alignleft\">right</div></p></font><p class=\"alignright\"><canvas id=\"right\"></canvas></p><div style=\"clear: both;\"></div>");
+        legend_div.appendTo("#axes_legend");
 
-        legend_div = $("<div id=\"dorsal_legend\"><p class=\"alignleft\">dorsal</div></p><p class=\"alignright\"><canvas id=\"dorsal\"></canvas></p><div style=\"clear: both;\">" +
-          "<div id=\"ventral_legend\"><p class=\"alignleft\">ventral</div></p></font><p class=\"alignright\"><canvas id=\"ventral\"></canvas></p><div style=\"clear: both;\">" +
-          "<div id=\"anterior_legend\"><p class=\"alignleft\">anterior</div></p></font><p class=\"alignright\"><canvas id=\"anterior\"></canvas><p><div style=\"clear: both;\">" +
-          "<div id=\"posterior_legend\"<p class=\"alignleft\">posterior</div></p></font><p class=\"alignright\"><canvas id=\"posterior\"></canvas></p><div style=\"clear: both;\">" +
-          "<div id=\"left_legend\"<p class=\"alignleft\">left</div></p></font><p class=\"alignright\"><canvas id=\"left\"></canvas></p><div style=\"clear: both;\">" +
-          "<div id=\"right_legend\"<p class=\"alignleft\">right</div></p></font><p class=\"alignright\"><canvas id=\"right\"></canvas></p><div style=\"clear: both;\">");
-          legend_div.appendTo("#axes_legend");
-
+      if (bgcolor !== 255){
         drawDashed("dorsal","#0000ff",150);	//blue solid
-        drawDashed("ventral","#0000ff",8); 	//blue dashed
+        drawDashed("ventral","#0000ff",8);    	//blue dashed
+      } else {
+        drawDashed("dorsal","#000000",150);   	//black solid
+        drawDashed("ventral","#000000",8);    	//black dashed
+      }
+      if (bgcolor !== 65280){
         drawDashed("anterior","#00ff00",150);	//green solid
         drawDashed("posterior","#00ff00",8);	//green dashed
+      } else {
+        drawDashed("anterior","#000000",150); 	//black solid
+        drawDashed("posterior","#000000",8);  	//black dashed
+      }
+      if (bgcolor !== 16711680){
         drawDashed("right","#ff0000",150);	//red solid
         drawDashed("left","#ff0000",8);		//red dashed
       } else {
-        document.getElementById("axes_legend").style.visibility = "visible";
-        document.getElementById("axes").style.visibility = "visible";
+        drawDashed("right","#000000",150);    	//black solid
+        drawDashed("left","#000000",8);       	//black dashed
       }
+
       if ((bgcolor === 16777215) || (bgcolor === 16776960) ||  (bgcolor === 65535)){  // if white / yellow / cyan bg
         font_color = "black";
       } else {
