@@ -123,7 +123,7 @@ $(function() {
             "Name: " + shape.name + "<br />" +
             "<p class=\"alignleft\"> Opacity: </p></div>");
           slider = $("<div id=\"opacity-slider" +  i +"\" class=\"opacity-slider aligncenter slider\" data-shape-name=\"" + shape.name + "\">");
-	  slider_div_end = $("<p class=\"alignright\"><a class=\"button\" id=\"individualtoggleopacity" +  i + "\">On</a></p>");
+	  slider_div_end = $("<p class=\"alignright\"><a class=\"on-off-button\" id=\"individualtoggleopacity" +  i + "\">On</a></p>");
           slider.slider({
             value: 100,
             min: 0,
@@ -153,6 +153,7 @@ $(function() {
               viewer.setTransparency(0, {shape_name: shape.name});
               $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value", 0);
               $(this).html("Off");
+              document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "red";
 	      document.getElementById("opacity-slider" + i).style.visibility = "hidden";
               clearShape("marker");
 	    } else {
@@ -160,6 +161,7 @@ $(function() {
               viewer.setTransparency(alpha, {shape_name: shape.name});
               $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value", slider_backup[shape.name]);
               $(this).html("On");
+              document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "green";
               document.getElementById("opacity-slider" + i).style.visibility = "visible";
               if (marker !== ""){
 	        marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
@@ -200,6 +202,7 @@ $(function() {
                 document.getElementById("top-" + i).style.visibility = "visible";
                 viewer.setTransparency(1, {shape_name: child.name});
                 $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+                document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "green";
                 $("#individualtoggleopacity" + i).html("On");
               } else {   //focus selected object, no need for shift-click
                 document.getElementById("shape-" + i).style.backgroundColor = "black";
@@ -207,6 +210,7 @@ $(function() {
                 slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
                 viewer.setTransparency(0, {shape_name: child.name});
                 $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+                document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "red";
                 $("#individualtoggleopacity" + i).html("Off");
               }
             }
@@ -226,6 +230,7 @@ $(function() {
                 document.getElementById("top-" + i).style.visibility = "visible";
                 viewer.setTransparency(1, {shape_name: child.name});
                 $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+                document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "green";
                 $("#individualtoggleopacity" + i).html("On");
               } else {   //focus selected object, no need for shift-click
                 document.getElementById("shape-" + i).style.backgroundColor = "black";
@@ -233,6 +238,7 @@ $(function() {
                 slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
                 viewer.setTransparency(0, {shape_name: child.name});
                 $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+                document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "red";
                 $("#individualtoggleopacity" + i).html("Off");
               }
             }
@@ -289,6 +295,7 @@ $(function() {
                 slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
                 viewer.setTransparency(0, {shape_name: child.name});
                 $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 0);
+                document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "red";
                 $("#individualtoggleopacity" + i).html("Off");
               }
             }
@@ -302,6 +309,7 @@ $(function() {
                 var alpha = slider_backup[child.name] / 100;
                 viewer.setTransparency(alpha, {shape_name: child.name});
                 $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
+                document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "green";
                 $("#individualtoggleopacity" + i).html("On");
               }
             }
@@ -567,8 +575,6 @@ $(function() {
     $("#resetview").click(function() {
 
       clearShape("marker");
-      clearShape("axes");
-      axes_toggle = "off";
 
       // Setting the view to its current view type will
       // automatically reset its position and opacity is reset to 100% for all shapes.
@@ -578,6 +584,7 @@ $(function() {
         if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
           viewer.setTransparency(1, {shape_name: child.name});
           $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+          document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "green";
           $("#individualtoggleopacity" + i).html("On");
           document.getElementById("opacity-slider" + i).style.visibility = "visible";
           document.getElementById("shape-" + i).style.backgroundColor = "black";
@@ -613,6 +620,7 @@ $(function() {
             slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
             viewer.setTransparency(1, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
+            document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "green";
             $("#individualtoggleopacity" + i).html("On");
             document.getElementById("opacity-slider" + i).style.visibility = "visible";           }
         });

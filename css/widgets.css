@@ -15,6 +15,16 @@
   color: #F0F0F0;
 }
 
+.on-off-button {
+  display: inline-block;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 0.5em 1em;
+  background-color: green;
+  color: #F0F0F0;
+}
+
 .icon {
   display: inline-block;
   cursor: pointer;
