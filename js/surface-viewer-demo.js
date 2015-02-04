@@ -620,6 +620,14 @@ $(function() {
             var alpha = slider_backup[child.name] / 100;
             viewer.setTransparency(alpha, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", slider_backup[child.name]);
+            $("#individualtoggleopacity" + i).html(on_off_backup[i]);
+            if (on_off_backup[i] == "On"){
+                document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "green";
+                document.getElementById("opacity-slider" + i).style.visibility = "visible";
+            } else {
+                document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "red";
+                document.getElementById("opacity-slider" + i).style.visibility = "hidden";
+            }
           }
 	}); 
         if (marker !== ""){
@@ -634,6 +642,7 @@ $(function() {
         viewer.model.children.forEach(function(child,i) {
           if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){ 
             slider_backup[child.name] = $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value");
+            on_off_backup[i] = $("#individualtoggleopacity" + i).html();
             viewer.setTransparency(1, {shape_name: child.name});
             $(".opacity-slider[data-shape-name='" + child.name + "']").slider("value", 100);
             document.getElementById("individualtoggleopacity" + i).style.backgroundColor = "green";
