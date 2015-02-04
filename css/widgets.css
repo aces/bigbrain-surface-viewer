@@ -77,8 +77,12 @@ input[type=checkbox].icon:checked + label:active {
   background-color: #1E8FFF;
 }
 
+.button:hover {
+  background-color: #3EAFFF;
+}
+
 .buttonset {
-  word-spacing: -4px;
+  word-spacing: 0px;
 }
 
 .buttonset .button {

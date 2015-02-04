@@ -105,29 +105,25 @@ strong  {
 #controls {
   display: none;
   position: absolute;
+  top: 44px;
   bottom: 51px;
   right: 20px;
-  background: rgba(0, 0, 0, 0);
   height: 30px;
   width: 0;
-  border: 2px solid #777777;
   overflow: hidden;
 }
 
 #controls-content {
   position: absolute;
-  top: 5px;
+  top: 0px;
   bottom: 5px;
-  left: 5px;
-  right: 5px;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 1px;
 }
 
 #control-button {
   position: absolute;
-  bottom: 23px;
+  top: 15px;
   right: 20px;
   z-index: 9;
 }
@@ -187,10 +183,26 @@ strong  {
   width: 90px;
 }
 
+.box-top {
+  background: #000000;
+  padding: 10px;
+  margin: 0px;
+  border: 2px solid #FFFFFF;
+  border-bottom-width: 0px;
+}
+
 .box {
   background: #000000;
   padding: 10px;
   margin: 0px;
+  border: 2px solid #FFFFFF;
+}
+
+.box-bottom {
+  background: #000000;
+  padding: 5px;
+  margin: 0px;
+  border: 2px solid #FFFFFF;
 }
 
 .half-box {
@@ -289,9 +301,9 @@ select#clear-color {
 }
 
 div.file-select {
-  margin-bottom: 1.5em;
-  background-color: #FFFFFF;
-  color: #000000;
+  margin-bottom: 0em;
+  background-color: #000000;
+  color: #FFFFFF;
   font-weight: bold;
   padding: 0.5em;
 }
