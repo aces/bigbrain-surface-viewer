@@ -26,8 +26,35 @@ footer, header, hgroup, menu, nav, section {
   display: block;
 }
 
-body {
-  line-height: 1;
+body{
+  line-height: 1
+}
+
+ul.tabs{
+  margin: 0px;
+  padding: 0px;
+  list-style: none;
+}
+
+ul.tabs li{
+  background: none;
+  display: inline-block;
+  padding: 10px 15px;
+  cursor: pointer;
+}
+
+ul.tabs li.current{
+  background: #333333;
+}
+
+.tab-content{
+  background: #333333;
+  display: none;
+  padding: 15px;
+}
+
+.tab-content.current{
+  display: inherit;
 }
 
 ol, ul {
@@ -87,10 +114,6 @@ h4 {
 ul {
   list-style-type: disc;
   margin-left: 1em;
-}
-
-li {
-  margin: 0.2em 0;
 }
 
 strong  {
@@ -236,8 +259,8 @@ strong  {
   width:70%;
 }
 
-#shapes {
-  max-height: 500px;
+#shape-wrap {
+  max-height: 800px;
   overflow: auto;
 }
 

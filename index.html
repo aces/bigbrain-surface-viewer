@@ -26,12 +26,7 @@
           (powered by <a href="https://brainbrowser.cbrain.mcgill.ca/" target="_blank">BrainBrowser</a>)</small>
       </h1>
       <a id="control-button" class="button">Hide Controls</a>
-      <div id="vertex-data-wrapper">
-        <div id="vertex-data">
-          <div id="axes"></div>
-        </div>
-        <div id="axes_legend"></div>
-      </div>
+      <div id="vertex-data-wrapper"></div>
       <!-- Loading image from: http://www.ajaxload.info/ -->
       <div id="loading" style="display: none"><img src="img/ajax-loader.gif"></div>
       <div id="brainbrowser"></div>
@@ -44,7 +39,7 @@
             </div>     
             <div id="obj_file_select" class="file-select">
               Object File:
-              <input type="file" name="objfile" id="objfile"><br>
+              <div id="browse_obj_file"><input type="file" name="objfile" id="objfile"></div><br>
               Format: 
               <select  id="obj_file_format" class="file-format" name="format">
                 <option value="json">JSON</option>

@@ -284,7 +284,7 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
   * viewer.pick(125, 250);  // Pick at given position.
   * ```
   */
-  viewer.pick = function(x, y, searchindex) { //if x,y defined, find index;  if index defined (via search), find x,y
+  viewer.pick = function(x, y, searchindex, m_selected, m_index_begin, m_index_end, offset_diff, model_data_get_selected) { //if x,y defined, find index;  if index defined (via search), find x,y
     x = x === undefined ? viewer.mouse.x : x;
     y = y === undefined ? viewer.mouse.y : y;
 
@@ -295,8 +295,18 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
 
       var intersect_object;
 
-      var vector = viewer.getVertex(searchindex); //find xyz coords of vertex number
-      for (i = 0; i < model.children.length; i++) {
+      //var vector = viewer.getVertex(searchindex); //find xyz coords of vertex number
+      var vector = viewer.getVertex2(searchindex,model_data_get_selected); //find xyz coords of vertex number
+
+      var startsearch = 0;
+      var endsearch = model.children.length;
+
+      if (m_selected > 0) {
+        startsearch = m_index_begin[m_selected];
+        endsearch = m_index_end[m_selected];
+      }
+
+      for (i = startsearch; i < endsearch; i++) {
         if ((model.children[i].name !== "axes") && (model.children[i].name !== "marker")){
 
           var vertices = model.children[i].geometry.attributes.index.array;
@@ -343,6 +353,7 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
 
       vector.unproject(camera);
       raycaster.set(camera.position, vector.sub(camera.position).normalize());
+
       intersects = raycaster.intersectObject(model, true);
 
       for (i = 0; i < intersects.length; i++) {
@@ -480,14 +491,23 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
     if (viewer.autorotate.x) {
       model.rotation.x += rotation;
       viewer.updated = true;
+      if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+        axesbox.model.rotation.x = viewer.model.rotation.x;
+      }
     }
     if (viewer.autorotate.y) {
       model.rotation.y += rotation;
       viewer.updated = true;
+      if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+        axesbox.model.rotation.y = viewer.model.rotation.y;
+      }
     }
     if (viewer.autorotate.z) {
       model.rotation.z += rotation;
       viewer.updated = true;
+      if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+        axesbox.model.rotation.z = viewer.model.rotation.z;
+      }
     }
     if (old_zoom_level !== viewer.zoom) {
       old_zoom_level = viewer.zoom;
