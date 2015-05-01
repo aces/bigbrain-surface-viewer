@@ -123,6 +123,7 @@ $(function() {
           "</div>" +
           "</div></div>");
         select_div.appendTo("#views");
+        m_selected = 1;
         m1_model_data_get = viewer.model_data.get();
       }
 
@@ -241,16 +242,16 @@ $(function() {
           viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
         }
 
-        // USEFUL FOR DEBUGGING - PLACES RED SPHERE AT CENTER OR ROTATION
-        var cyl_material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
-        var cyl_width = 1;
-        var cyl_height = 5;
-        var cylGeometry = new THREE.CylinderGeometry(cyl_width, cyl_width, cyl_height, 20, 1, false);
-        cylGeometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, cyl_height/2, 0 ) );
-        var cylinder = new THREE.Mesh(cylGeometry, cyl_material);
+//        // USEFUL FOR DEBUGGING - PLACES RED SPHERE AT CENTER OR ROTATION
+//        var cyl_material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+//        var cyl_width = 1;
+//        var cyl_height = 5;
+//        var cylGeometry = new THREE.CylinderGeometry(cyl_width, cyl_width, cyl_height, 20, 1, false);
+//        cylGeometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, cyl_height/2, 0 ) );
+//        var cylinder = new THREE.Mesh(cylGeometry, cyl_material);
 
-        viewer.model.parent.add( cylinder );
-        cylinder.rotation.x = 0.5*Math.PI;
+//        viewer.model.parent.add( cylinder );
+//        cylinder.rotation.x = 0.5*Math.PI;
 
         //Move origin to center of object (0 is arbitrary shape #, all should have identical boundingSphere.center)
         if (initial_offset_done < 1){
