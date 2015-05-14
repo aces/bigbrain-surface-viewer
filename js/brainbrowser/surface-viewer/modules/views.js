@@ -157,12 +157,16 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
 
     shapes.forEach(function(shape) {
       wireframe = shape.getObjectByName("__WIREFRAME__");
-      if (wireframe) {
-        toggleWireframe(shape, wireframe, is_wireframe);
-      } else if (shape.userData.has_wireframe && !shape.userData.creating_wireframe) {
-        createWireframe(shape, function(wireframe) {
+      var i = shape.name;
+      i =  Math.abs(i.substr(i.length-2, i.length-1));
+      if ($("#individualtoggleopacity-" + i).html() == "On"){
+        if (wireframe) {
           toggleWireframe(shape, wireframe, is_wireframe);
-        });
+        } else if (shape.userData.has_wireframe && !shape.userData.creating_wireframe) {
+          createWireframe(shape, function(wireframe) {
+            toggleWireframe(shape, wireframe, is_wireframe);
+          });
+        }
       }
     });
   };
@@ -298,9 +302,16 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
   function toggleWireframe(shape, wireframe, is_wireframe) {
     shape.material.visible = !is_wireframe;
     wireframe.material.visible = is_wireframe;
+
+    var wf = shape.getObjectByName("__WIREFRAME__");
+    var alpha = $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value")/100;
+    wf.material.opacity = alpha;
+
+    if (alpha < 1){
+      wf.material.transparent = true;
+    }
     viewer.updated = true;
   }
-  
 };
 
 
