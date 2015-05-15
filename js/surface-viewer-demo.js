@@ -345,7 +345,6 @@ $(function() {
           marker.name = "marker";
           viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
         }
-
 //        // USEFUL FOR DEBUGGING - PLACES RED SPHERE AT CENTER OR ROTATION
 //        var cyl_material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
 //        var cyl_width = 1;
@@ -856,7 +855,7 @@ $(function() {
     $("#toggleopacitycustom").click(function() {
 
       if (  opacity_toggle_oncustom == "custom") {
-      for (var i = 0; i < viewer.model.children.length; i++) {
+        for (var i = 0; i < viewer.model.children.length; i++) {
           if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
             var alpha = slider_backup[viewer.model.children[i].name] / 100;
             viewer.setTransparency(alpha, {shape_name: viewer.model.children[i].name});
