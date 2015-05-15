@@ -339,6 +339,34 @@ $(function() {
             eval("opacity_toggle_customoff_" + m + " = \"custom\"");
 	  }
         });
+
+        if ((m>1) && (marker !== "")){
+          marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+          marker.name = "marker";
+          viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+        }
+
+//        // USEFUL FOR DEBUGGING - PLACES RED SPHERE AT CENTER OR ROTATION
+//        var cyl_material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+//        var cyl_width = 1;
+//        var cyl_height = 5;
+//        var cylGeometry = new THREE.CylinderGeometry(cyl_width, cyl_width, cyl_height, 20, 1, false);
+//        cylGeometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, cyl_height/2, 0 ) );
+//        var cylinder = new THREE.Mesh(cylGeometry, cyl_material);
+
+//        viewer.model.parent.add( cylinder );
+//        cylinder.rotation.x = 0.5*Math.PI;
+
+        //Move origin to center of object (0 is arbitrary shape #, all should have identical boundingSphere.center)
+        if (initial_offset_done < 1){
+          viewer.model.children[0].geometry.computeBoundingSphere();
+          initial_offset = viewer.model.children[0].geometry.boundingSphere.center;
+          viewer.model.children[0].geometry.applyMatrix(new THREE.Matrix4().makeTranslation( -initial_offset.x, -initial_offset.y, -initial_offset.z ) );
+          initial_offset_done=1;
+        }
+
+        ////rotate 270 deg to make sure dorsal is on top
+        //viewer.model.children[0].geometry.applyMatrix(new THREE.Matrix4().makeRotationX( 3*Math.PI / 2 ) );
       }
 
       $("#searchshapes").autocomplete({
