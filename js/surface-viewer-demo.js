@@ -234,7 +234,7 @@ $(function() {
 	        //TEMP FIX FOR MARKE OPACITY
                 if (viewer.model.children[viewer.model.children.length-1].name == "marker"){
 		  viewer.model.children[viewer.model.children.length-1].material.transparent = false;
-		} else if {(viewer.model.children[viewer.model.children.length-2].name == "marker"){
+		} else if (viewer.model.children[viewer.model.children.length-2].name == "marker"){
 		  viewer.model.children[viewer.model.children.length-2].material.transparent = false;
                 }
 	        // END TEMP FIX
