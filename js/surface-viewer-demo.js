@@ -238,6 +238,13 @@ $(function() {
 	        marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
 	        marker.name = "marker";
 	        viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+	        //TEMP FIX FOR MARKE OPACITY
+                if (viewer.model.children[viewer.model.children.length-1].name == "marker"){
+		  viewer.model.children[viewer.model.children.length-1].material.transparent = false;
+		} else if (viewer.model.children[viewer.model.children.length-2].name == "marker"){
+		  viewer.model.children[viewer.model.children.length-2].material.transparent = false;
+                }
+	        // END TEMP FIX
               }
 	    }
           });
