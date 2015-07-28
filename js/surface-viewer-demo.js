@@ -269,15 +269,15 @@ $(function() {
         $("#shapes-" + m).prepend(toggle_opacity_icon_onoff);
 
         // USEFUL FOR DEBUGGING - PLACES RED SPHERE AT CENTER OF ROTATION
-        var cyl_material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
-        var cyl_width = 1;
-        var cyl_height = 5;
-        var cylGeometry = new THREE.CylinderGeometry(cyl_width, cyl_width, cyl_height, 20, 1, false);
-        cylGeometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, cyl_height/2, 0 ) );
-        var cylinder = new THREE.Mesh(cylGeometry, cyl_material);
+//        var cyl_material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+//        var cyl_width = 1;
+//        var cyl_height = 5;
+//        var cylGeometry = new THREE.CylinderGeometry(cyl_width, cyl_width, cyl_height, 20, 1, false);
+//        cylGeometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, cyl_height/2, 0 ) );
+//        var cylinder = new THREE.Mesh(cylGeometry, cyl_material);
 
-        viewer.model.parent.add( cylinder );
-        cylinder.rotation.x = 0.5*Math.PI;
+//        viewer.model.parent.add( cylinder );
+//        cylinder.rotation.x = 0.5*Math.PI;
 
         //  If model 2 is loaded and if model 1 has already been recentered, move model 2's origin to be the same as model 1's original origin
         if ((m == 2) && (m1_offset == 1)){
