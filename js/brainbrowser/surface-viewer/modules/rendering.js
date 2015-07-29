@@ -290,7 +290,7 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
 
     var model = viewer.model;
     var vertex_data;
-
+ 
     if ((searchindex !== "") && (/^\d+$/.test(searchindex))){  // If strictly numeric, search by vertex number
 
       var intersect_object;
@@ -345,10 +345,7 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
       var centroid, cx, cy, cz;
       var opacity_threshold = 0.25; //somewhat arbitrary threshold of 25%
 
-      // Because we're comparing against
-      // the vertices in their original positions,
-      // we have move everything to place the model at its
-      // original position.
+      // Because we're comparing against the vertices in their original positions, we have to move everything to place the model at its original position.
       var inv_matrix = new THREE.Matrix4();
 
       vector.unproject(camera);
@@ -458,8 +455,10 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
           vertex_data = {
             index: intersect_vertex_index,
             point: intersect_vertex_coords,
-            object: intersect_object
+            object: intersect_object,
+            vector: vector
           };
+
         }
       } else {
         vertex_data = null;
