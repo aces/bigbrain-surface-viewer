@@ -132,7 +132,7 @@ strong  {
   bottom: 51px;
   right: 20px;
   height: 30px;
-  width: 0;
+  width: 410px !important;
   overflow: hidden;
 }
 
@@ -157,19 +157,34 @@ strong  {
   width: 100%;
 }
 
+#grid {
+  position: relative;
+  top: 450px;
+  left: 60px;
+}
+
+#grid_partitions_go_button {
+  position: relative;
+  left: 50px;
+}
+
+#grid_length_go_button {
+  position: relative;
+  left: 50px;
+}
+
 #axes {
   position: absolute;
-  left: 0px;
+  left: 25px;
   right: 0px;
   top: 0px;
   height: 300px;
   width: 300px;
-  background: rgba(0, 0, 0, 0);
 }
 
 #axes_legend {
   position: absolute;
-  left: 0px;
+  left: 25px;
   width: 200px;
   top: 300px;
   height: 100px;
@@ -414,11 +429,11 @@ div#format-hints {
 }
 
 .alignleft {
-	float: left;
+  float: left;
 }
 
 .alignright {
-	float: right;
+  float: right;
 }
 
 .aligncenter {

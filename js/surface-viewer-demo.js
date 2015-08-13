@@ -67,6 +67,7 @@ $(function() {
     var opacity_toggle_oncustom = "on";
     var opacity_toggle_customoff_1 = "custom";
     var opacity_toggle_customoff_2 = "custom";
+    var scale_toggle = "off";
     var axes_toggle = "off";
     var slider_backup = {};
     var on_off_backup = {}
@@ -87,6 +88,9 @@ $(function() {
     var m1_model_data_get;
     var m2_model_data_get;
     var m1_offset = 0;
+    var grid_backup = undefined;
+    var grid_length = 100;
+    var grid_partitions = 10;
 
     // Add the three.js 3D anaglyph effect to the viewer.
     viewer.addEffect("AnaglyphEffect");
@@ -102,6 +106,14 @@ $(function() {
     // When a new model is added to the viewer, create a transparency slider
     // for each shape that makes up the model.
     viewer.addEventListener("displaymodel", function(event) {
+
+      // Temporarily disable grid if it was turned on before model is loaded
+      viewer.model.children.forEach(function(child,i) {
+        if (child.name === "grid") {
+          grid_backup = viewer.model.children.splice(i, 1);
+          viewer.updated = true;
+        }
+      });
 
       if (m < 1){
         var select_div = $("<div class=\"select-cell\"><div id=\"select\" class=\"box-bottom full-box \">" +
@@ -256,6 +268,13 @@ $(function() {
             var b = Math.round(255*m2_model_data_get.shapes[i].color[2]);
             document.getElementById("opacity-slider-" + j).style.background = "rgb("+ r + ", " + g + ", " + b + ")";
           }
+
+          //If grid was on before model was loaded but was temporarily disabled to load model, bring it back
+          if (grid_backup !== undefined) {
+            viewer.model.add(grid_backup[0]);
+            grid_backup = undefined;
+          }
+
         });
 
         //If 2 models, get rid of duplicates in list that user sees in search box
@@ -284,6 +303,18 @@ $(function() {
           viewer.model.children[m_index_begin[2]].geometry.applyMatrix(new THREE.Matrix4().makeTranslation( -offset_old.x, -offset_old.y, -offset_old.z ) );
         }
 
+        // This is a little hack to make sure that none of the shapes slip outside of the original radius 
+        // after the geometry is translated to the center of a previous shape.
+        // Can also set boundingSphere to null but this seems to slow down the performance too much.
+
+        for (var i = 0; i < viewer.model.children.length; i++) {
+          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
+            viewer.model.children[i].geometry.computeBoundingSphere();
+            var orig_boundingSphere = viewer.model.children[i].geometry.boundingSphere.radius;
+            viewer.model.children[i].geometry.boundingSphere.radius = orig_boundingSphere*2;
+          }
+        }
+
         // Toggle / hide opacity for a tab (custom vs. off).
         $("#hidetab-" + m).click(function() {
           if (eval("opacity_toggle_customoff_" + m) == "custom") {
@@ -291,7 +322,7 @@ $(function() {
 	    if (m_selected == 1) { m_unselected = 2;} 
 	    else if (m_selected == 2) {m_unselected = 1};
             for (var i = 0; i < viewer.model.children.length; i++) {
-              if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (i >= m_index_begin[m_selected]) && (i < m_index_end[m_selected])){
+              if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid") && (i >= m_index_begin[m_selected]) && (i < m_index_end[m_selected])){
                 slider_backup[viewer.model.children[i].name] = $(".opacity-slider[data-shape-name='" + viewer.model.children[i].name + "']").slider("value");
                 on_off_backup[i] = $("#individualtoggleopacity-" + i).html();
                 viewer.setTransparency(0, {shape_name: viewer.model.children[i].name});
@@ -303,7 +334,7 @@ $(function() {
                   viewer.setTransparency(0, {shape_name: "marker"});
                 }
 	      //Have to reorder rendering of other model so that its transparent shapes are not cutoff / intersected by model that is being hidden
-              } else if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (i >= m_index_begin[m_unselected]) && (i < m_index_end[m_unselected])){
+              } else if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid") && (i >= m_index_begin[m_unselected]) && (i < m_index_end[m_unselected])){
 		viewer.model.children[i].renderDepth = 1;
 		viewer.updated = true;
 	      }
@@ -312,7 +343,7 @@ $(function() {
 	  } else if (eval("opacity_toggle_customoff_" + m) == "off") {
 
             for (var i = 0; i < viewer.model.children.length; i++) {
-              if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (i >= m_index_begin[m_selected]) && (i < m_index_end[m_selected])){
+              if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid") && (i >= m_index_begin[m_selected]) && (i < m_index_end[m_selected])){
                 var alpha = slider_backup[viewer.model.children[i].name] / 100;
                 viewer.setTransparency(alpha, {shape_name: viewer.model.children[i].name});
                 $(".opacity-slider[data-shape-name='" + viewer.model.children[i].name + "']").slider("value", slider_backup[viewer.model.children[i].name]);
@@ -351,6 +382,8 @@ $(function() {
         if (two_models_toggle < 2){
 
           clearShape("marker");
+          clearShape("marker");  //sometimes needs to be done twice if scale option is on, not sure why.
+
           marker = "";
 
           if ((searchshapes.value !== "") && (!/^\d+$/.test(searchshapes.value))){  //Only do the following if string is not blank & contains some text (i.e. not strictly numeric)
@@ -369,7 +402,7 @@ $(function() {
             }
 
             for (var i = 0; i < viewer.model.children.length; i++) {
-              if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+              if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
                 on_off_backup[i] = $("#individualtoggleopacity-" + i).html();
                 slider_backup[viewer.model.children[i].name] = $(".opacity-slider[data-shape-name='" + viewer.model.children[i].name + "']").slider("value");
                 if (viewer.model.children[i].name == searchshapes_value_long) {
@@ -413,7 +446,7 @@ $(function() {
                 }
               }
 
-              if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+              if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
                 on_off_backup[i] = $("#individualtoggleopacity-" + i).html();
                 slider_backup[viewer.model.children[i].name] = $(".opacity-slider[data-shape-name='" + viewer.model.children[i].name + "']").slider("value");
                 if (viewer.model.children[i].name == picked_object.name) {
@@ -451,6 +484,7 @@ $(function() {
                 picked_coords.subVectors(picked_coords, offset_old);
               }
             }
+            clearShape("marker");
             marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, .3);
             marker.name = "marker";
             viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
@@ -470,7 +504,7 @@ $(function() {
         clearShape("marker");
         document.getElementById("searchshapes").value = "";
         for (var i = 0; i < viewer.model.children.length; i++) {
-          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
             window.location.hash = "#surface-choice";
             document.getElementById("shape-" + i).style.backgroundColor = "#333333";
             document.getElementById("top-" + i).style.visibility = "hidden";
@@ -506,7 +540,7 @@ $(function() {
 
         if ((focus_toggle == "off") && (ct < viewer.model.children.length) && (two_models_toggle < 2)){
           for (var i = 0; i < viewer.model.children.length; i++) {
-            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
               if (viewer.model.children[i].name !== name) {
                 ct=ct+1;
                 slider_backup[viewer.model.children[i].name] = $(".opacity-slider[data-shape-name='" + viewer.model.children[i].name + "']").slider("value");
@@ -524,7 +558,7 @@ $(function() {
           }
         } else if ((focus_toggle == "on") && (ct < viewer.model.children.length) && (two_models_toggle < 2)){
           for (var i = 0; i < viewer.model.children.length; i++) {
-            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
               if (viewer.model.children[i].name !== name) {
                 ct=ct+1;
                 var alpha = slider_backup[viewer.model.children[i].name] / 100;
@@ -575,7 +609,9 @@ $(function() {
       axes_toggle= "off";
       clearShape("marker");
       clearShape("axes");
+      clearShape("grid");
       $( ".legend" ).empty();
+      $( ".grid_class" ).remove();
     });
 
     // When the intensity range changes, adjust the displayed spectrum.
@@ -783,19 +819,23 @@ $(function() {
       bgcolor = parseInt($(e.target).val(), 16);
       viewer.setClearColor(bgcolor);
 
-      var font_color;
-      if ((bgcolor === 16777215) || (bgcolor === 16776960) ||  (bgcolor === 65535)){  // if white / yellow / cyan bg
-        font_color = "black";
-      } else {
-        font_color = "white";
-      }
-      document.getElementById("vertex-data").style.color = font_color;
       if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){ 
         $( ".axes_class" ).remove();
         $( ".axes_legend_class" ).remove();
+        $( ".grid_class" ).remove();
         clearShape("axes");
+        clearShape("grid");
+        window.axesbox = undefined;
         var axes = buildAxes( axes_length );
       }
+
+//      if (window.scalebox !== undefined){
+//        $( ".scale_class" ).remove();
+//        clearShape("scale");
+//        window.scalebox = undefined;
+//        var scale = buildScale( axes_length );
+//      }
+
     });
     
     // Reset to the default view.
@@ -808,7 +848,7 @@ $(function() {
       viewer.setView($("[name=hem_view]:checked").val());
 
       for (var i = 0; i < viewer.model.children.length; i++) {
-        if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+        if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
           viewer.setTransparency(1, {shape_name: viewer.model.children[i].name});
           $(".opacity-slider[data-shape-name='" + viewer.model.children[i].name + "']").slider("value", 100);
           document.getElementById("individualtoggleopacity-" + i).style.backgroundColor = "green";
@@ -827,7 +867,7 @@ $(function() {
 
       if (  opacity_toggle_oncustom == "custom") {
         for (var i = 0; i < viewer.model.children.length; i++) {
-          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
             var alpha = slider_backup[viewer.model.children[i].name] / 100;
             viewer.setTransparency(alpha, {shape_name: viewer.model.children[i].name});
             $(".opacity-slider[data-shape-name='" + viewer.model.children[i].name + "']").slider("value", slider_backup[viewer.model.children[i].name]);
@@ -851,7 +891,7 @@ $(function() {
           viewer.setTransparency(1, {shape_name: "marker"});
         }
         for (var i = 0; i < viewer.model.children.length; i++) {
-          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){ 
+          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){ 
             slider_backup[viewer.model.children[i].name] = $(".opacity-slider[data-shape-name='" + viewer.model.children[i].name + "']").slider("value");
             on_off_backup[i] = $("#individualtoggleopacity-" + i).html();
             viewer.setTransparency(1, {shape_name: viewer.model.children[i].name});
@@ -970,6 +1010,24 @@ $(function() {
       viewer.autorotate.z = $("#autorotateZ").is(":checked");
     });
 
+//    // Toggle scale.
+//    $("#toggle-scale").click(function() {
+//      if (scale_toggle === "off"){
+//        var scale = buildScale( axes_length );
+//        scale_toggle = "on";
+//      } else {
+//        $( ".scale_class" ).remove();
+//        clearShape("scale");
+//        window.scalebox = undefined;
+//        scale_toggle = "off";
+//        if (marker !== ""){
+//          marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
+//          marker.name = "marker";
+//          viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+//        }
+//      }
+//    });
+
     // Toggle axes.
     $("#toggle-axes").click(function() {
       if (axes_toggle === "off"){
@@ -978,8 +1036,10 @@ $(function() {
       } else {
         $( ".axes_class" ).remove();
         $( ".axes_legend_class" ).remove();
-        window.axesbox = undefined;
+        $( ".grid_class" ).remove();
         clearShape("axes");
+        clearShape("grid");
+        window.axesbox = undefined;
 	axes_toggle = "off";
         if (marker !== ""){
           marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
@@ -1021,25 +1081,22 @@ $(function() {
         clearShape("marker");
 
         for (var i = 0; i < viewer.model.children.length; i++) {
-          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+          if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
             slider_backup[viewer.model.children[i].name] = $(".opacity-slider[data-shape-name='" + viewer.model.children[i].name + "']").slider("value");
-
-            // This is a little hack to make sure that none of the shapes slip outside of the original radius after the geometry is translated to the center of a previous shape.
-	    // Can also set boundingSphere to null but this seems to slow down the performance too much.
-            viewer.model.children[i].geometry.boundingSphere.radius = 100;  
           }
         }
 
         pick(viewer.mouse.x, viewer.mouse.y, event.ctrlKey);
-        searchshapes_value_long = picked_object.name;
 
         if (picked_object === null) {
           marker = "";
           clearShape("marker");
           return;
         } else {
+          searchshapes_value_long = picked_object.name;
           for (var i = 0; i < viewer.model.children.length; i++) {
-            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker")){
+
+            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
               if (viewer.model.children[i].name == picked_object.name) {
                 for (var n = 1; n < m+1; n++) {
                   $("#shapes-" + n + " .shape").each(function() {
@@ -1079,6 +1136,7 @@ $(function() {
           }
         }
         focus_toggle = "on";
+        clearShape("marker");
         if ((viewer.model.children[viewer.model.children.length-1].name != "marker") && (viewer.model.children[viewer.model.children.length-2].name != "marker")){
           marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
           marker.name = "marker";
@@ -1332,7 +1390,9 @@ $(function() {
             axesbox.updated = true;
           }
         });
-      } else {
+      } else if ((name === "scale") && (window.scalebox !== undefined)){
+        viewer.removeScale();
+      } else {  //marker or grid
         viewer.model.children.forEach(function(child,i) {
 
           if (child.name === name) {
@@ -1343,44 +1403,201 @@ $(function() {
       }
     }
 
+//    function buildScale( length ) {
+//
+//      var scale_color;
+//      var units = 10;
+//
+//      if ((bgcolor !== 16777215) && (bgcolor !== 65535) && (bgcolor !== 16776960)) { //if background is not white or cyan or yellow
+//        scale_color = "white";
+//      } else {
+//        scale_color = "black";
+//      }
+//
+//    var scale_div = $("<div id=\"scale\"><p class=\"alignleft\">Grid scale: <span title=\"Type in value to change default of 10\"><input type=\"text\" name=\"scale_legend\" placeholder=\"" + units + "\" style=\"width: 60px;\"></span>" +
+//               " units</p><div style=\"clear: both;\"></div></div>");
+//    scale_div.appendTo("#vertex-data-wrapper");
+//
+//    document.getElementById("scale").style.color = scale_color;
+//
+//      viewer.drawScale(units,0,0, scale_color);
+//
+//      if (window.scalebox === undefined){
+//        window.scalebox = BrainBrowser.SurfaceViewer.start("scale", function(scalebox) {
+//          scalebox.render();
+//          scalebox.setClearColor(0, 0);
+//        });
+//      }
+//  }
+
     function buildAxes( length ) {
 
-      var font_color; 
-      var axes_all = new THREE.Object3D();
+      var font_color;
 
-      var origin_y = 0;
-//      var origin_y = -200;
-
-
-      if (bgcolor !== 16711680){
-        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( length, origin_y, 0 ), 0xFF0000, false ) ); // +X  	red solid = right
-        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( -length, origin_y, 0 ), 0xFF0000, true) ); // -X 	red dashed = left
+      if ((bgcolor === 16777215) || (bgcolor === 16776960) || (bgcolor === 65535)){  // if white / yellow / cyan bg
+        font_color = "black";
       } else {
-        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( length, origin_y, 0 ), 0x000000, false ) ); // +X      black solid = right
-        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( -length, origin_y, 0 ), 0x000000, true) ); // -X       black dashed = left
+        font_color = "white";
       }
 
-      if (bgcolor !== 65280){
+      var gridXY_position = 0;
+      var gridYZ_position = 0;
+      var gridXZ_position = 0;
+
+      // This html is a bit of a mess but it works and unfortunately I am short on time before maternity leave!
+
+      var grid_div = $("<div class=\"grid_class\">" +
+                       "<div id=\"grid\"><p class=\"alignleft\">Grid scale: <span title=\"Type in value to change default of 10\">" +
+                       "<input id=\"grid_partitions\" type=\"text\" placeholder=\"" + grid_partitions + "\" style=\"width: 70px;\"></span>" +
+                       " units</p><div style=\"clear: both;\"></div><div id=\"grid_partitions_go_button\"><span id=\"input_grid_partitions\" class=\"button\">Go!</span> " +
+                       "<span id=\"clear_grid_partitions\" class=\"button\">Clear</span></div></div></div>");
+
+      var grid_length_div = $("<br><div id=\"grid_length\"><p class=\"alignleft\">Grid length: <span title=\"Type in value to change default of 100\">" +
+                       "<input id=\"grid_length2\" type=\"text\" placeholder=\"" + grid_length + "\" style=\"width: 70px;\"></span>" +
+                       " units</p><div style=\"clear: both;\"></div><div id=\"grid_length_go_button\"><span id=\"input_grid_length\" class=\"button\">Go!</span> " +
+                       "<span id=\"clear_grid_length\" class=\"button\">Clear</span></div></div>");
+
+      grid_div.appendTo("#vertex-data-wrapper");
+      grid_length_div.appendTo("#grid");
+
+      document.getElementById("grid").style.color = font_color;
+      document.getElementById("grid_length").style.color = font_color;
+
+      $("#input_grid_partitions").click(function() {
+        if (document.getElementById("grid_partitions").value !== ""){
+	  grid_partitions = parseInt(document.getElementById("grid_partitions").value);
+          clearShape("grid");
+          buildGrid(grid_partitions, grid_length );
+        }
+      });
+
+      $("#clear_grid_partitions").click(function() {
+        document.getElementById("grid_partitions").value = "";
+        $("#grid_partitions").attr("placeholder", "");
+      });
+
+      $("#input_grid_length").click(function() {
+        if (document.getElementById("grid_length2").value !== ""){
+          grid_length = parseInt(document.getElementById("grid_length2").value);
+          clearShape("grid");
+          buildGrid(grid_partitions, grid_length );
+        }
+      });
+
+      $("#clear_grid_length").click(function() {
+        document.getElementById("grid_length").value = "";
+        $("#grid_length").attr("placeholder", "");
+      });
+
+      buildGrid(grid_partitions, grid_length );
+
+      function buildGrid( grid_partitions, grid_length ) {
+
+        // grid xz
+        var gridXZ = new THREE.GridHelper(grid_length, grid_partitions );
+        gridXZ.position.set(gridXZ_position,0,0);
+
+        // grid xy
+        var gridXY = new THREE.GridHelper(grid_length, grid_partitions );
+        gridXY.rotation.x = Math.PI/2;
+        gridXY.position.set(0,0,gridXY_position);
+
+        // grid yz
+        var gridYZ = new THREE.GridHelper(grid_length, grid_partitions );
+        gridYZ.rotation.z = Math.PI/2;
+        gridYZ.position.set(0,gridYZ_position,0);
+
+        if (bgcolor !== 16711680){ //if bg not red
+          if ((bgcolor === 16777215) || (bgcolor === 16776960) || (bgcolor === 65535)){  // if white / yellow / cyan bg
+            gridXY.setColors( new THREE.Color(0xFF0000), new THREE.Color(0x000000) ); // red central gridline, black for rest of gridlines
+          } else {
+            gridXY.setColors( new THREE.Color(0xFF0000), new THREE.Color(0xFFFFFF) ); // red central gridline, white for rest of gridlines
+          }
+          var material = new THREE.LineBasicMaterial({color: 0xFF0000});
+        } else { //if bg is red
+          gridXY.setColors( new THREE.Color(0x000000), new THREE.Color(0xFFFFFF) );
+          var material = new THREE.LineBasicMaterial({color: 0x000000});
+        }
+        var geometry = new THREE.Geometry();
+        geometry.vertices.push(new THREE.Vector3(grid_length + gridXZ_position, 0, 0));
+        geometry.vertices.push(new THREE.Vector3(-grid_length + gridXZ_position, 0, 0));
+        var gridXZ_colorfix = new THREE.Line(geometry, material);
+
+        if (bgcolor !== 65280){ //if bg not green
+          if ((bgcolor === 16777215) || (bgcolor === 16776960) || (bgcolor === 65535)){  // if white / yellow / cyan bg
+            gridYZ.setColors( new THREE.Color(0x00FF00), new THREE.Color(0x000000) ); // green central gridline, black for rest of gridlines
+          } else {
+            gridYZ.setColors( new THREE.Color(0x00FF00), new THREE.Color(0xFFFFFF) ); // green central gridline, white for rest of gridlines
+          }
+          var material = new THREE.LineBasicMaterial({color: 0x00FF00});
+        } else { //if bg is green
+          gridYZ.setColors( new THREE.Color(0x000000), new THREE.Color(0xFFFFFF) );
+          var material = new THREE.LineBasicMaterial({color: 0x000000});
+        }
+        var geometry = new THREE.Geometry();
+        geometry.vertices.push(new THREE.Vector3(0, grid_length, gridXY_position));
+        geometry.vertices.push(new THREE.Vector3(0, -grid_length, gridXY_position));
+        var gridXY_colorfix = new THREE.Line(geometry, material);
+
+        if (bgcolor !== 255){ //if bg not blue
+          if ((bgcolor === 16777215) || (bgcolor === 16776960) || (bgcolor === 65535)){  // if white / yellow / cyan bg
+            gridXZ.setColors( new THREE.Color(0x0000FF), new THREE.Color(0x000000) ); // blue central gridline, black for rest of gridlines
+          } else {
+            gridXZ.setColors( new THREE.Color(0x0000FF), new THREE.Color(0xFFFFFF) ); // blue central gridline, white for rest of gridlines
+          }
+          var material = new THREE.LineBasicMaterial({color: 0x0000FF});
+        } else { //if bg is blue
+          gridXZ.setColors( new THREE.Color(0x000000), new THREE.Color(0xFFFFFF) );
+          var material = new THREE.LineBasicMaterial({color: 0x000000});
+        }
+      
+        var geometry = new THREE.Geometry();
+        geometry.vertices.push(new THREE.Vector3(0, gridYZ_position, grid_length));
+        geometry.vertices.push(new THREE.Vector3(0, gridYZ_position, -grid_length));
+        var gridYZ_colorfix = new THREE.Line(geometry, material);
+
+        var grid = new THREE.Object3D();
+        grid.name = "grid";
+        grid.add(gridXZ);
+        grid.add(gridXZ_colorfix);
+        grid.add(gridXY);
+        grid.add(gridXY_colorfix);
+        grid.add(gridYZ);
+        grid.add(gridYZ_colorfix);
+
+        viewer.model.add(grid);
+      }
+
+      var axes_all = new THREE.Object3D();
+      axes_all.name = "axes";
+      var origin_y = 0;
+
+      if (bgcolor !== 16711680){ //if bg not red
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( -length, origin_y, 0 ), 0xFF0000, false ) ); // +X     red dashed = right
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( length, origin_y, 0 ), 0xFF0000, true) ); // -X        red solid = left
+      } else { //if bg is red
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( -length, origin_y, 0 ), 0x000000, false ) ); // +X     black dashed = right
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( length, origin_y, 0 ), 0x000000, true) ); // -X        black solid = left
+      }
+
+      if (bgcolor !== 65280){ //if bg not green
         axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, length + origin_y, 0 ), 0x00FF00, false ) ); // +Y  green solid = anterior
         axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, -length + origin_y, 0 ), 0x00FF00, true ) ); // -Y  green dashed = posterior
-      } else {
+      } else { //if bg is green
         axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, length + origin_y, 0 ), 0x000000, false ) ); // +X  black solid = anterior
         axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, -length + origin_y, 0 ), 0x000000, true) ); // -X   black dashed = posterior
       }
 
-      if (bgcolor !== 255){
-        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, length ), 0x0000FF, false ) ); // +Z    	blue solid = dorsal
-        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, -length ), 0x0000FF, true ) ); // -Z    	blue dashed = ventral
-      } else {
+      if (bgcolor !== 255){ //if bg not blue
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, length ), 0x0000FF, false ) ); // +Z      blue solid = dorsal
+        axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, -length ), 0x0000FF, true ) ); // -Z      blue dashed = ventral
+      } else { //if bg is blue
         axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, length ), 0x000000, false ) ); // +X      black solid = dorsal
         axes_all.add( buildAxis( new THREE.Vector3( 0, origin_y, 0 ), new THREE.Vector3( 0, origin_y, -length ), 0x000000, true) ); // -X       black dashed = ventral
       }
 
-      axes_all.name = "axes";
-
       var axes_div = $("<div class=\"axes_class\"><div id=\"axes\"></div></div><div class=\"axes_legend_class\"><div id=\"axes_legend\"></div></div>");
       axes_div.appendTo("#vertex-data-wrapper");
-
 
       if (window.axesbox === undefined){
         window.axesbox = BrainBrowser.SurfaceViewer.start("axes", function(axesbox) {
@@ -1397,12 +1614,12 @@ $(function() {
       axesbox.model.name = "axes_on";
       axesbox.setClearColor(0, 0);
 
-      legend_div = $("<div class=\"legend\"><div id=\"dorsal_legend\"><p class=\"alignleft\">dorsal</div></p><p class=\"alignright\"><canvas id=\"dorsal\"></canvas></p><div style=\"clear: both;\">" +
-        "<div id=\"ventral_legend\"><p class=\"alignleft\">ventral</div></p></font><p class=\"alignright\"><canvas id=\"ventral\"></canvas></p><div style=\"clear: both;\">" +
-        "<div id=\"anterior_legend\"><p class=\"alignleft\">anterior</div></p></font><p class=\"alignright\"><canvas id=\"anterior\"></canvas><p><div style=\"clear: both;\">" +
-        "<div id=\"posterior_legend\"<p class=\"alignleft\">posterior</div></p></font><p class=\"alignright\"><canvas id=\"posterior\"></canvas></p><div style=\"clear: both;\">" +
-        "<div id=\"left_legend\"<p class=\"alignleft\">left</div></p></font><p class=\"alignright\"><canvas id=\"left\"></canvas></p><div style=\"clear: both;\">" +
-        "<div id=\"right_legend\"<p class=\"alignleft\">right</div></p></font><p class=\"alignright\"><canvas id=\"right\"></canvas></p><div style=\"clear: both;\"></div>");
+      legend_div = $("<div class=\"legend\"><div id=\"dorsal_legend\"><p class=\"alignleft\">dorsal</p><p class=\"alignright\"><canvas id=\"dorsal\"></canvas></p></div><div style=\"clear: both;\"></div>" +
+        "<div id=\"ventral_legend\"><p class=\"alignleft\">ventral</p><p class=\"alignright\"><canvas id=\"ventral\"></canvas></p></div><div style=\"clear: both;\"></div>" +
+        "<div id=\"anterior_legend\"><p class=\"alignleft\">anterior</p><p class=\"alignright\"><canvas id=\"anterior\"></canvas></p></div><div style=\"clear: both;\"></div>" +
+        "<div id=\"posterior_legend\"><p class=\"alignleft\">posterior</p><p class=\"alignright\"><canvas id=\"posterior\"></canvas></p></div><div style=\"clear: both;\"></div>" +
+        "<div id=\"left_legend\"><p class=\"alignleft\">left</p><p class=\"alignright\"><canvas id=\"left\"></canvas></p></div><div style=\"clear: both;\"></div>" +
+        "<div id=\"right_legend\"><p class=\"alignleft\">right</p><p class=\"alignright\"><canvas id=\"right\"></canvas></p></div><div style=\"clear: both;\"></div></div>");
         legend_div.appendTo("#axes_legend");
 
       if (bgcolor !== 255){
@@ -1420,24 +1637,19 @@ $(function() {
         drawDashed("posterior","#000000",8);  	//black dashed
       }
       if (bgcolor !== 16711680){
-        drawDashed("right","#ff0000",150);	//red solid
-        drawDashed("left","#ff0000",8);		//red dashed
+        drawDashed("left","#ff0000",150);       //red solid
+        drawDashed("right","#ff0000",8);	//red dashed
       } else {
-        drawDashed("right","#000000",150);    	//black solid
-        drawDashed("left","#000000",8);       	//black dashed
+        drawDashed("left","#000000",150);       //black solid
+        drawDashed("right","#000000",8);    	//black dashed
       }
 
-      if ((bgcolor === 16777215) || (bgcolor === 16776960) ||  (bgcolor === 65535)){  // if white / yellow / cyan bg
-        font_color = "black";
-      } else {
-        font_color = "white";
-      }
-        document.getElementById("dorsal_legend").style.color = font_color;
-        document.getElementById("ventral_legend").style.color = font_color;
-        document.getElementById("anterior_legend").style.color = font_color;
-        document.getElementById("posterior_legend").style.color = font_color;
-        document.getElementById("left_legend").style.color = font_color;
-        document.getElementById("right_legend").style.color = font_color;
+      document.getElementById("dorsal_legend").style.color = font_color;
+      document.getElementById("ventral_legend").style.color = font_color;
+      document.getElementById("anterior_legend").style.color = font_color;
+      document.getElementById("posterior_legend").style.color = font_color;
+      document.getElementById("left_legend").style.color = font_color;
+      document.getElementById("right_legend").style.color = font_color;
     }
 
     function buildAxis( src, dst, colorHex, dashed ) {
