@@ -67,7 +67,6 @@ $(function() {
     var opacity_toggle_oncustom = "on";
     var opacity_toggle_customoff_1 = "custom";
     var opacity_toggle_customoff_2 = "custom";
-    var scale_toggle = "off";
     var axes_toggle = "off";
     var slider_backup = {};
     var on_off_backup = {}
@@ -382,8 +381,6 @@ $(function() {
         if (two_models_toggle < 2){
 
           clearShape("marker");
-          clearShape("marker");  //sometimes needs to be done twice if scale option is on, not sure why.
-
           marker = "";
 
           if ((searchshapes.value !== "") && (!/^\d+$/.test(searchshapes.value))){  //Only do the following if string is not blank & contains some text (i.e. not strictly numeric)
@@ -488,6 +485,15 @@ $(function() {
             marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, .3);
             marker.name = "marker";
             viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+            if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+              $( ".axes_class" ).remove();
+              $( ".axes_legend_class" ).remove();
+              $( ".grid_class" ).remove();
+              clearShape("axes");
+              clearShape("grid");
+              window.axesbox = undefined;
+              var axes = buildAxes( axes_length, picked_coords.x, picked_coords.y, picked_coords.z );
+            }
           }
           focus_toggle = "on";
           if (two_models_toggle == 1) {
@@ -826,15 +832,12 @@ $(function() {
         clearShape("axes");
         clearShape("grid");
         window.axesbox = undefined;
-        var axes = buildAxes( axes_length );
+        if (picked_coords !== undefined){
+          var axes = buildAxes( axes_length, picked_coords.x, picked_coords.y, picked_coords.z );
+        } else {
+          var axes = buildAxes( axes_length, 0, 0, 0 );
+        }
       }
-
-//      if (window.scalebox !== undefined){
-//        $( ".scale_class" ).remove();
-//        clearShape("scale");
-//        window.scalebox = undefined;
-//        var scale = buildScale( axes_length );
-//      }
 
     });
     
@@ -1010,28 +1013,14 @@ $(function() {
       viewer.autorotate.z = $("#autorotateZ").is(":checked");
     });
 
-//    // Toggle scale.
-//    $("#toggle-scale").click(function() {
-//      if (scale_toggle === "off"){
-//        var scale = buildScale( axes_length );
-//        scale_toggle = "on";
-//      } else {
-//        $( ".scale_class" ).remove();
-//        clearShape("scale");
-//        window.scalebox = undefined;
-//        scale_toggle = "off";
-//        if (marker !== ""){
-//          marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
-//          marker.name = "marker";
-//          viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
-//        }
-//      }
-//    });
-
     // Toggle axes.
     $("#toggle-axes").click(function() {
       if (axes_toggle === "off"){
-        var axes = buildAxes( axes_length );
+        if (picked_coords !== undefined){
+          var axes = buildAxes( axes_length, picked_coords.x, picked_coords.y, picked_coords.z );
+        } else {
+          var axes = buildAxes( axes_length, 0, 0, 0 );
+        }
         axes_toggle = "on";
       } else {
         $( ".axes_class" ).remove();
@@ -1142,6 +1131,15 @@ $(function() {
           marker.name = "marker";
           viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
           focus_toggle = "off";
+          if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+            $( ".axes_class" ).remove();
+            $( ".axes_legend_class" ).remove();
+            $( ".grid_class" ).remove();
+            clearShape("axes");
+            clearShape("grid");
+            window.axesbox = undefined;
+            var axes = buildAxes( axes_length, picked_coords.x, picked_coords.y, picked_coords.z );
+          }
         }
       } else if (two_models_toggle == 2) {
         two_models_toggle = 1;
@@ -1390,8 +1388,6 @@ $(function() {
             axesbox.updated = true;
           }
         });
-      } else if ((name === "scale") && (window.scalebox !== undefined)){
-        viewer.removeScale();
       } else {  //marker or grid
         viewer.model.children.forEach(function(child,i) {
 
@@ -1403,34 +1399,7 @@ $(function() {
       }
     }
 
-//    function buildScale( length ) {
-//
-//      var scale_color;
-//      var units = 10;
-//
-//      if ((bgcolor !== 16777215) && (bgcolor !== 65535) && (bgcolor !== 16776960)) { //if background is not white or cyan or yellow
-//        scale_color = "white";
-//      } else {
-//        scale_color = "black";
-//      }
-//
-//    var scale_div = $("<div id=\"scale\"><p class=\"alignleft\">Grid scale: <span title=\"Type in value to change default of 10\"><input type=\"text\" name=\"scale_legend\" placeholder=\"" + units + "\" style=\"width: 60px;\"></span>" +
-//               " units</p><div style=\"clear: both;\"></div></div>");
-//    scale_div.appendTo("#vertex-data-wrapper");
-//
-//    document.getElementById("scale").style.color = scale_color;
-//
-//      viewer.drawScale(units,0,0, scale_color);
-//
-//      if (window.scalebox === undefined){
-//        window.scalebox = BrainBrowser.SurfaceViewer.start("scale", function(scalebox) {
-//          scalebox.render();
-//          scalebox.setClearColor(0, 0);
-//        });
-//      }
-//  }
-
-    function buildAxes( length ) {
+    function buildAxes( length, x, y, z ) {
 
       var font_color;
 
@@ -1440,20 +1409,16 @@ $(function() {
         font_color = "white";
       }
 
-      var gridXY_position = 0;
-      var gridYZ_position = 0;
-      var gridXZ_position = 0;
-
       // This html is a bit of a mess but it works and unfortunately I am short on time before maternity leave!
 
       var grid_div = $("<div class=\"grid_class\">" +
                        "<div id=\"grid\"><p class=\"alignleft\">Grid scale: <span title=\"Type in value to change default of 10\">" +
-                       "<input id=\"grid_partitions\" type=\"text\" placeholder=\"" + grid_partitions + "\" style=\"width: 70px;\"></span>" +
+                       "<input id=\"grid_partitions\" type=\"text\" value=\"" + grid_partitions + "\" style=\"width: 70px;\"></span>" +
                        " units</p><div style=\"clear: both;\"></div><div id=\"grid_partitions_go_button\"><span id=\"input_grid_partitions\" class=\"button\">Go!</span> " +
                        "<span id=\"clear_grid_partitions\" class=\"button\">Clear</span></div></div></div>");
 
       var grid_length_div = $("<br><div id=\"grid_length\"><p class=\"alignleft\">Grid length: <span title=\"Type in value to change default of 100\">" +
-                       "<input id=\"grid_length2\" type=\"text\" placeholder=\"" + grid_length + "\" style=\"width: 70px;\"></span>" +
+                       "<input id=\"grid_length2\" type=\"text\" value=\"" + grid_length + "\" style=\"width: 70px;\"></span>" +
                        " units</p><div style=\"clear: both;\"></div><div id=\"grid_length_go_button\"><span id=\"input_grid_length\" class=\"button\">Go!</span> " +
                        "<span id=\"clear_grid_length\" class=\"button\">Clear</span></div></div>");
 
@@ -1473,7 +1438,7 @@ $(function() {
 
       $("#clear_grid_partitions").click(function() {
         document.getElementById("grid_partitions").value = "";
-        $("#grid_partitions").attr("placeholder", "");
+        $("#grid_partitions").attr("value", "");
       });
 
       $("#input_grid_length").click(function() {
@@ -1485,85 +1450,49 @@ $(function() {
       });
 
       $("#clear_grid_length").click(function() {
-        document.getElementById("grid_length").value = "";
-        $("#grid_length").attr("placeholder", "");
+        document.getElementById("grid_length2").value = "";
+        $("#grid_length").attr("value", "");
       });
 
       buildGrid(grid_partitions, grid_length );
 
       function buildGrid( grid_partitions, grid_length ) {
 
-        // grid xz
-        var gridXZ = new THREE.GridHelper(grid_length, grid_partitions );
-        gridXZ.position.set(gridXZ_position,0,0);
+        var gridXZ;
+        var gridXY;
+        var gridYZ;
 
-        // grid xy
-        var gridXY = new THREE.GridHelper(grid_length, grid_partitions );
+        if ((bgcolor !== 16711680) && (bgcolor !== 65280) && (bgcolor !== 255)){ //if bg not red or green or blue
+          gridXZ = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0xFF0000), new THREE.Color(0x0000FF));  //red horizontal, blue vertical
+          gridXY = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0xFF0000), new THREE.Color(0x00FF00));  //red horizontal, green vertical
+          gridYZ = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0x00FF00), new THREE.Color(0x0000FF));  //green horizontal, blue vertical
+        } else if (bgcolor === 16711680){ //if bg is red
+          gridXZ = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0x000000), new THREE.Color(0x0000FF));  //black horizontal, blue vertical
+          gridXY = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0x000000), new THREE.Color(0x00FF00));  //black horizontal, green vertical
+          gridYZ = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0x00FF00), new THREE.Color(0x0000FF));  //green horizontal, blue vertical
+        } else if (bgcolor === 65280){ //if bg is green
+          gridXZ = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0xFF0000), new THREE.Color(0x0000FF));  //red horizontal, blue vertical
+          gridXY = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0xFF0000), new THREE.Color(0x000000));  //red horizontal, black vertical
+          gridYZ = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0x000000), new THREE.Color(0x0000FF));  //black horizontal, blue vertical
+        } else if (bgcolor === 255){ //if bg is blue
+          gridXZ = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0xFF0000), new THREE.Color(0x000000));  //red horizontal, black vertical
+          gridXY = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0xFF0000), new THREE.Color(0x00FF00));  //red horizontal, green vertical
+          gridYZ = new THREE.GridHelper(grid_length, grid_partitions, new THREE.Color(0x00FF00), new THREE.Color(0x000000));  //green horizontal, black vertical
+        }
+
+        gridXZ.position.set(x,y,z);
+
         gridXY.rotation.x = Math.PI/2;
-        gridXY.position.set(0,0,gridXY_position);
+        gridXY.position.set(x,y,z);
 
-        // grid yz
-        var gridYZ = new THREE.GridHelper(grid_length, grid_partitions );
         gridYZ.rotation.z = Math.PI/2;
-        gridYZ.position.set(0,gridYZ_position,0);
-
-        if (bgcolor !== 16711680){ //if bg not red
-          if ((bgcolor === 16777215) || (bgcolor === 16776960) || (bgcolor === 65535)){  // if white / yellow / cyan bg
-            gridXY.setColors( new THREE.Color(0xFF0000), new THREE.Color(0x000000) ); // red central gridline, black for rest of gridlines
-          } else {
-            gridXY.setColors( new THREE.Color(0xFF0000), new THREE.Color(0xFFFFFF) ); // red central gridline, white for rest of gridlines
-          }
-          var material = new THREE.LineBasicMaterial({color: 0xFF0000});
-        } else { //if bg is red
-          gridXY.setColors( new THREE.Color(0x000000), new THREE.Color(0xFFFFFF) );
-          var material = new THREE.LineBasicMaterial({color: 0x000000});
-        }
-        var geometry = new THREE.Geometry();
-        geometry.vertices.push(new THREE.Vector3(grid_length + gridXZ_position, 0, 0));
-        geometry.vertices.push(new THREE.Vector3(-grid_length + gridXZ_position, 0, 0));
-        var gridXZ_colorfix = new THREE.Line(geometry, material);
-
-        if (bgcolor !== 65280){ //if bg not green
-          if ((bgcolor === 16777215) || (bgcolor === 16776960) || (bgcolor === 65535)){  // if white / yellow / cyan bg
-            gridYZ.setColors( new THREE.Color(0x00FF00), new THREE.Color(0x000000) ); // green central gridline, black for rest of gridlines
-          } else {
-            gridYZ.setColors( new THREE.Color(0x00FF00), new THREE.Color(0xFFFFFF) ); // green central gridline, white for rest of gridlines
-          }
-          var material = new THREE.LineBasicMaterial({color: 0x00FF00});
-        } else { //if bg is green
-          gridYZ.setColors( new THREE.Color(0x000000), new THREE.Color(0xFFFFFF) );
-          var material = new THREE.LineBasicMaterial({color: 0x000000});
-        }
-        var geometry = new THREE.Geometry();
-        geometry.vertices.push(new THREE.Vector3(0, grid_length, gridXY_position));
-        geometry.vertices.push(new THREE.Vector3(0, -grid_length, gridXY_position));
-        var gridXY_colorfix = new THREE.Line(geometry, material);
-
-        if (bgcolor !== 255){ //if bg not blue
-          if ((bgcolor === 16777215) || (bgcolor === 16776960) || (bgcolor === 65535)){  // if white / yellow / cyan bg
-            gridXZ.setColors( new THREE.Color(0x0000FF), new THREE.Color(0x000000) ); // blue central gridline, black for rest of gridlines
-          } else {
-            gridXZ.setColors( new THREE.Color(0x0000FF), new THREE.Color(0xFFFFFF) ); // blue central gridline, white for rest of gridlines
-          }
-          var material = new THREE.LineBasicMaterial({color: 0x0000FF});
-        } else { //if bg is blue
-          gridXZ.setColors( new THREE.Color(0x000000), new THREE.Color(0xFFFFFF) );
-          var material = new THREE.LineBasicMaterial({color: 0x000000});
-        }
-      
-        var geometry = new THREE.Geometry();
-        geometry.vertices.push(new THREE.Vector3(0, gridYZ_position, grid_length));
-        geometry.vertices.push(new THREE.Vector3(0, gridYZ_position, -grid_length));
-        var gridYZ_colorfix = new THREE.Line(geometry, material);
+        gridYZ.position.set(x,y,z);
 
         var grid = new THREE.Object3D();
         grid.name = "grid";
         grid.add(gridXZ);
-        grid.add(gridXZ_colorfix);
         grid.add(gridXY);
-        grid.add(gridXY_colorfix);
         grid.add(gridYZ);
-        grid.add(gridYZ_colorfix);
 
         viewer.model.add(grid);
       }

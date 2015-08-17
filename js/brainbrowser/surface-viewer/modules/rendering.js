@@ -38,10 +38,7 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
   renderer.autoClear = false;
 
   var scene = new THREE.Scene();
-  var scene_scale = new THREE.Scene();
-  var scale;
   var camera = new THREE.PerspectiveCamera(30, viewer.dom_element.offsetWidth / viewer.dom_element.offsetHeight, 1, 3000);
-  var camera_scale = new THREE.PerspectiveCamera(30, viewer.dom_element.offsetWidth / viewer.dom_element.offsetHeight, 1, 3000);
   var default_camera_distance = 500;
   var light = new THREE.PointLight(0xFFFFFF);
   var current_frame;
@@ -50,14 +47,10 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
   var effects = {};
   var canvas = renderer.domElement;
   var old_zoom_level;
-  var old_zoom_level_model;
-  var old_zoom_level_scale = viewer.zoom;
 
   viewer.model = new THREE.Object3D();
-  scale = new THREE.Object3D();
   
   scene.add(viewer.model);
-  scene_scale.add(scale);  
 
   /**
   * @doc function
@@ -74,7 +67,6 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
     dom_element.appendChild(renderer.domElement);
     
     camera.position.z = default_camera_distance;
-    camera_scale.position.z = default_camera_distance;
     light.position.set(0, 0, default_camera_distance);
     scene.add(light);
     viewer.updateViewport();
@@ -99,8 +91,6 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
     effect.setSize(dom_element.offsetWidth, dom_element.offsetHeight);
     camera.aspect = dom_element.offsetWidth / dom_element.offsetHeight;
     camera.updateProjectionMatrix();
-    camera_scale.aspect = dom_element.offsetWidth / dom_element.offsetHeight;
-    camera_scale.updateProjectionMatrix();
 
     viewer.updated = true;
   };
@@ -278,27 +268,6 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
     return sphere;
 
   };
- 
-  viewer.drawScale = function(x, y, z, color) {
-
-    var geometry = new THREE.BoxGeometry( x, x, x, 2, 2, 2 );
-    var material = new THREE.MeshBasicMaterial( {color: color});
-
-    var line = new THREE.Mesh(geometry, material);
-    var edges = new THREE.EdgesHelper( line, color );
-
-    scale.add(edges);
-
-    old_zoom_level_model = viewer.zoom;
-    viewer.zoom = old_zoom_level_scale;
-    return line;
-  };
-
-  viewer.removeScale = function() {
-    scale.children.splice(0,1);
-    old_zoom_level_scale = viewer.zoom;
-    viewer.zoom = old_zoom_level_model;
-  }
  
   /**
   * @doc function
@@ -511,13 +480,7 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
 
   // Render a single frame on the viewer.
   function renderFrame(timestamp) {
-    var model;
-
-    if (scale.children.length === 1){
-      model = scale;
-    } else {
-      model = viewer.model;
-    }
+    var model = viewer.model;
 
     var delta;
     var rotation;
@@ -559,11 +522,7 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
     }
     if (viewer.updated) {
       if (new_z > camera.near && new_z < 0.9 * camera.far) {
-        if (scale.children.length === 1){
-          camera_scale.position.z = new_z;
-        } else {
-          camera.position.z = new_z;
-        }
+        camera.position.z = new_z;
         light.position.z = new_z;
       }
 
@@ -575,16 +534,6 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
         scene: scene,
         camera: camera
       });
-
-      if (scale.children.length === 1){
-//       renderer.clearDepth();   //if we want the scale to always be rendered on top of model 
-       effect.render(scene_scale, camera_scale);
-        viewer.triggerEvent("draw", {
-          renderer: effect,
-          scene: scene_scale,
-          camera: camera_scale
-        });
-      } 
     viewer.updated = false;
   }
 }
@@ -608,15 +557,9 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
       if (last_x !== null) {
         dx = x - last_x;
         dy = y - last_y;
-        var model;
+        var model = viewer.model;
 
         if (movement === "rotate") {
-	  // If scale is on, rotate scale, but do not rotate model.  If scale is off, rotate model.
-          if (scale.children.length === 1){
-            model = scale;
-	  } else {
-	    model = viewer.model;
-	  }
 
           // Want to always be rotating around
           // world axes.
@@ -641,13 +584,8 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
           multiplier = multiplier || 1.0;
           multiplier *= camera.position.z / default_camera_distance;
 
-          if (scale.children.length === 1){
-            camera_scale.position.x -= dx * multiplier * 0.25;
-            camera_scale.position.y += dy * multiplier * 0.25;
-	  } else {
-            camera.position.x -= dx * multiplier * 0.25;
-            camera.position.y += dy * multiplier * 0.25;
-	  }
+          camera.position.x -= dx * multiplier * 0.25;
+          camera.position.y += dy * multiplier * 0.25;
 
           light.position.x -= dx * multiplier * 0.25;
           light.position.y += dy * multiplier * 0.25;

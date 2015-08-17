@@ -33720,7 +33720,8 @@
    * @author mrdoob / http://mrdoob.com/
    */
 
-  THREE.GridHelper = function ( size, step ) {
+//  THREE.GridHelper = function ( size, step ) {
+  THREE.GridHelper = function ( size, step, horizontal_color, vertical_color ) {
 
     var geometry = new THREE.Geometry();
     var material = new THREE.LineBasicMaterial( { vertexColors: THREE.VertexColors } );
@@ -33737,8 +33738,8 @@
 
       var color = i === 0 ? this.color1 : this.color2;
 
-      geometry.colors.push( color, color, color, color );
-
+//      geometry.colors.push( color, color, color, color );
+      geometry.colors.push( horizontal_color, horizontal_color, vertical_color, vertical_color );
     }
 
     THREE.Line.call( this, geometry, material, THREE.LinePieces );
