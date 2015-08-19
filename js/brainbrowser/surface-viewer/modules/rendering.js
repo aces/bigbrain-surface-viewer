@@ -291,7 +291,7 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
   * viewer.pick(125, 250);  // Pick at given position.
   * ```
   */
-  viewer.pick = function(x, y, searchindex, m_selected, m_index_begin, m_index_end, offset_diff, model_data_get_selected) { //if x,y defined, find index;  if index defined (via search), find x,y
+  viewer.pick = function(x, y, searchindex, m_selected, m_index_begin, m_index_end, offset_diff_total, model_data_get_selected) { //if x,y defined, find index;  if index defined (via search), find x,y
     x = x === undefined ? viewer.mouse.x : x;
     y = y === undefined ? viewer.mouse.y : y;
 
@@ -334,6 +334,14 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
         }
       }
     } else {	//if searching by shift-click (and not searchstring), find intersection
+
+      //clear grid so that it doesn't block view of model
+      model.children.forEach(function(child,i) {
+        if (child.name === "grid") {
+          model.children.splice(i, 1);
+          viewer.updated = true;
+        }
+      });
 
       // Convert to normalized device coordinates.
       x = (x / viewer.dom_element.offsetWidth) * 2 - 1;
@@ -523,7 +531,7 @@ BrainBrowser.SurfaceViewer.modules.rendering = function(viewer) {
     if (viewer.updated) {
       if (new_z > camera.near && new_z < 0.9 * camera.far) {
         camera.position.z = new_z;
-        light.position.z = new_z;
+//        light.position.z = new_z;
       }
 
       renderer.clear();
