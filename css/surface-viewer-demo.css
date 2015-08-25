@@ -160,17 +160,7 @@ strong  {
 #grid {
   position: relative;
   top: 450px;
-  left: 60px;
-}
-
-#grid_partitions_go_button {
-  position: relative;
-  left: 50px;
-}
-
-#grid_length_go_button {
-  position: relative;
-  left: 50px;
+  left: 0px;
 }
 
 #axes {
@@ -184,11 +174,9 @@ strong  {
 
 #axes_legend {
   position: absolute;
-  left: 25px;
   width: 200px;
   top: 300px;
   height: 100px;
-  padding: 10px;
 }
 
 #dorsal {
