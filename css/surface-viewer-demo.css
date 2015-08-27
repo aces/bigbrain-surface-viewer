@@ -133,15 +133,14 @@ strong  {
   right: 20px;
   height: 30px;
   width: 410px !important;
-  overflow: hidden;
 }
 
 #controls-content {
   position: absolute;
   top: 0px;
   bottom: 5px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  right: 0px;
+  overflow: auto;
 }
 
 #control-button {
