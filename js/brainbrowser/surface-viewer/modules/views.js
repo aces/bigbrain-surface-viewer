@@ -142,7 +142,8 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
   * });
   * ```
   */
-  viewer.setWireframe = function(is_wireframe, options) {
+  viewer.setWireframe = function(is_wireframe, options, model_name) {
+
     options = options || {};
 
     var shape_name = options.shape_name;
@@ -155,14 +156,20 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
       shapes = viewer.model.children || [];
     }
 
-    shapes.forEach(function(shape) {
+    shapes.forEach(function(shape, j) {
+
       wireframe = shape.getObjectByName("__WIREFRAME__");
+
       var i = shape.name;
       i =  Math.abs(i.substr(i.length-2, i.length-1));
       if ($("#individualtoggleopacity-" + i).html() == "On"){
         if (wireframe) {
           toggleWireframe(shape, wireframe, is_wireframe);
         } else if (shape.userData.has_wireframe && !shape.userData.creating_wireframe) {
+
+          var model_data = viewer.model_data.get(model_name);
+          shape.color = model_data.shapes[j].color;
+
           createWireframe(shape, function(wireframe) {
             toggleWireframe(shape, wireframe, is_wireframe);
           });
@@ -229,6 +236,7 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
   ////////////////////////////////////
 
   function createWireframe(shape, callback) {
+
     shape.userData.creating_wireframe = true;
     if (active_wireframe_jobs < MAX_WIREFRAME_WORKERS) {
       launchWireframeWorker(shape, callback);
@@ -273,6 +281,15 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
       material = new THREE.LineBasicMaterial({ vertexColors: THREE.VertexColors });
       wireframe = new THREE.Line(wire_geometry, material, THREE.LinePieces);
 
+      var r = shape.color[0];
+      var g = shape.color[1];
+      var b = shape.color[2];
+
+      //Swapping rgb values so that wireframe mesh shows over surface (otherwise would be the same color)
+      wireframe.material.color.r = g;
+      wireframe.material.color.g = b;
+      wireframe.material.color.b = r;
+
       wireframe.name = "__WIREFRAME__";
       wireframe.material.visible = false;
       shape.add(wireframe);
@@ -300,7 +317,7 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
   }
 
   function toggleWireframe(shape, wireframe, is_wireframe) {
-    shape.material.visible = !is_wireframe;
+//    shape.material.visible = !is_wireframe;
     wireframe.material.visible = is_wireframe;
 
     var wf = shape.getObjectByName("__WIREFRAME__");

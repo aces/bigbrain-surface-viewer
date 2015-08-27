@@ -95,6 +95,7 @@ $(function() {
     var toggle_grid_XY = "on";
     var toggle_grid_XZ = "on";
     var toggle_grid_YZ = "on";
+    var opacity_grid_toggle = "on";
 
     // Add the three.js 3D anaglyph effect to the viewer.
     viewer.addEffect("AnaglyphEffect");
@@ -116,6 +117,8 @@ $(function() {
         if (child.name === "grid") {
           grid_backup = viewer.model.children.splice(i, 1);
           viewer.updated = true;
+          user_defined_grid_partitions = "no";
+          user_defined_grid_length = "no";
         }
       });
 
@@ -218,6 +221,39 @@ $(function() {
               viewer.setTransparency(alpha, {
                 shape_name: shape_name
               });
+              if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+		if ((opacity_grid_toggle === "on") && (alpha < 0.25 )){
+                  slider_backup[viewer.model.children[j].name] = alpha * 100;
+                  $( ".axes_class" ).remove();
+                  $( ".axes_legend_class" ).remove();
+                  $( ".grid_class" ).remove();
+                  clearShape("axes");
+                  clearShape("grid");
+                  window.axesbox = undefined;
+                  if (picked_coords !== undefined){
+                    var axes = buildAxes( axes_length, picked_coords.x, picked_coords.y, picked_coords.z, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+                  } else {
+                    var axes = buildAxes( axes_length, 0, 0, 0, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+                  }
+		  opacity_grid_toggle = "off";
+                } else if ((opacity_grid_toggle === "off") && (alpha >= 0.25 )){
+                  slider_backup[viewer.model.children[j].name] = alpha * 100;
+                  $( ".axes_class" ).remove();
+                  $( ".axes_legend_class" ).remove();
+                  $( ".grid_class" ).remove();
+                  clearShape("axes");
+                  clearShape("grid");
+                  window.axesbox = undefined;
+                  if (picked_coords !== undefined){
+                    var axes = buildAxes( axes_length, picked_coords.x, picked_coords.y, picked_coords.z, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+                  } else {
+                    var axes = buildAxes( axes_length, 0, 0, 0, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+                  }
+                  opacity_grid_toggle = "on";
+		}
+	      }
+
+
               if ((marker !== "") && (shape_name == picked_object.name)){
                 viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
                 //TEMP FIX FOR MARKER OPACITY
@@ -244,6 +280,20 @@ $(function() {
               $(this).html("Off");
               document.getElementById("individualtoggleopacity-" + j).style.backgroundColor = "red";
               document.getElementById("opacity-slider-" + j).style.visibility = "hidden";
+              if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+                $( ".axes_class" ).remove();
+                $( ".axes_legend_class" ).remove();
+                $( ".grid_class" ).remove();
+                clearShape("axes");
+                clearShape("grid");
+                window.axesbox = undefined;
+                if (picked_coords !== undefined){
+                  var axes = buildAxes( axes_length, picked_coords.x, picked_coords.y, picked_coords.z, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+                } else {
+                  var axes = buildAxes( axes_length, 0, 0, 0, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+                }
+                opacity_grid_toggle = "off";
+	      }
 	    } else {
               var alpha = slider_backup[shape.name + "-" + j] / 100;
               viewer.setTransparency(alpha, {shape_name: shape.name + "-" + j});
@@ -255,6 +305,20 @@ $(function() {
 	        marker = viewer.drawDot(picked_coords.x, picked_coords.y, picked_coords.z, 0.3);
 	        marker.name = "marker";
 	        viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
+              }
+              if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+                $( ".axes_class" ).remove();
+                $( ".axes_legend_class" ).remove();
+                $( ".grid_class" ).remove();
+                clearShape("axes");
+                clearShape("grid");
+                window.axesbox = undefined;
+                if (picked_coords !== undefined){
+                  var axes = buildAxes( axes_length, picked_coords.x, picked_coords.y, picked_coords.z, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+                } else {
+                  var axes = buildAxes( axes_length, 0, 0, 0, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+                }
+                opacity_grid_toggle = "on";
               }
 	    }
           });
@@ -295,16 +359,16 @@ $(function() {
 
         $("#shapes-" + m).prepend(toggle_opacity_icon_onoff);
 
-        // USEFUL FOR DEBUGGING - PLACES RED SPHERE AT CENTER OF ROTATION
-        var cyl_material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
-        var cyl_width = 1;
-        var cyl_height = 5;
-        var cylGeometry = new THREE.CylinderGeometry(cyl_width, cyl_width, cyl_height, 20, 1, false);
-        cylGeometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, cyl_height/2, 0 ) );
-        var cylinder = new THREE.Mesh(cylGeometry, cyl_material);
+//        // USEFUL FOR DEBUGGING - PLACES RED SPHERE AT CENTER OF ROTATION
+//        var cyl_material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+//        var cyl_width = 1;
+//        var cyl_height = 5;
+//        var cylGeometry = new THREE.CylinderGeometry(cyl_width, cyl_width, cyl_height, 20, 1, false);
+//        cylGeometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, cyl_height/2, 0 ) );
+//        var cylinder = new THREE.Mesh(cylGeometry, cyl_material);
 
-        viewer.model.parent.add( cylinder );
-        cylinder.rotation.x = 0.5*Math.PI;
+//        viewer.model.parent.add( cylinder );
+//        cylinder.rotation.x = 0.5*Math.PI;
 
         //  If model 2 is loaded and if model 1 has already been recentered, move model 2's origin to be the same as model 1's original origin
         if ((m == 2) && (m1_offset == 1)){
@@ -1129,6 +1193,7 @@ $(function() {
       loading_div.hide();
       $( ".select-cell" ).empty();
       m=0;
+      $( ".per_vertex_class" ).remove();
     });
 
     $("#brainbrowser").click(function(event) {
@@ -1219,11 +1284,24 @@ $(function() {
 
     // Load a new model from a file that the user has previously selected (only applies for a page reload).
 
-      $("#obj_file_submit").click(function() {
+    $("#obj_file_submit").click(function() {
+
+      $( ".per_vertex_class" ).remove();
 
       if (document.getElementById("objfile").value == ""){
         window.alert("Please select a file!");
         return;
+      }
+
+      // Attempt to automatically detect filetype based on filename extension.  May be incorrect for Wavefront OBJ, but we use MNI OBJ more often.
+      var filename = document.getElementById("objfile").value;
+
+      if (filename.indexOf(".json") > -1){
+        document.getElementById("obj_file_format").value = 'json';
+      } else if (filename.indexOf(".obj") > -1){
+        document.getElementById("obj_file_format").value = 'mniobj';
+      } else if (filename.indexOf(".asc") > -1){
+        document.getElementById("obj_file_format").value = 'freesurferasc';
       }
 
       var format = $(this).closest(".file-select").find("option:selected").val();
@@ -1233,23 +1311,115 @@ $(function() {
         format: format,
         complete: hideLoading
       });
+
+      if (format === "mniobj"){
+        var per_vertex_div = $("<div class=\"per_vertex_class\"><div id=\"per_vertex_file_select\" class=\"file-select\">Per vertex data: <div id=\"per_vertex_data\"><input id=\"datafile\" type =\"file\" name=\"datafile\"></input></div></div>" + 
+	  "<div id=\"data-submit\" class=\"file-submit-div\"><span id=\"data_submit_load\" class=\"button file-submit\">Load</span> " +
+          "<span id=\"data_submit_clear\" class=\"button\">Unload All</span></div>" +
+          "</div></div>");
+        per_vertex_div.appendTo("#surface_choice");
+      } else {
+        $( ".per_vertex_class" ).remove();
+      }
+
+      $("#data_submit_load").click(function() {
+
+ 	//Temporarily hard-coded for .txt files.  Should be opened up to Freesurfer .asc, binary, etc.
+
+//        var format = $(this).closest(".file-select").find("option:selected").val();
+        var format = 'text';
+
+        var file = document.getElementById("datafile");
+
+	//Temporarily hard-coded for spectral.  Should be opened to other color maps, ranges, etc.
+        viewer.loadColorMapFromURL("color-maps/spectral.txt");
+
+        viewer.loadIntensityDataFromFile(file, {
+          min: 0.5,
+          max: 5.5,
+          format: format,
+          blend: true
+        });
+      });
+
+      $("#data_submit_clear").click(function() {
+        viewer.clearScreen();
+        showLoading();
+        viewer.loadModelFromFile(document.getElementById("objfile"), {
+          format: format,
+          complete: hideLoading
+        });
+      });
+
       return false;
     });
 
     // Load a new model from a file that the user has just selected.
 
-      $("#browse_obj_file").change(function() {
+    $("#browse_obj_file").change(function() {
+
+      $( ".per_vertex_class" ).remove();
+
+      // Attempt to automatically detect filetype based on filename extension.  May be incorrect for Wavefront OBJ, but we use MNI OBJ more often.
+      var filename = document.getElementById("objfile").value;
+
+      if (filename.indexOf(".json") > -1){
+	document.getElementById("obj_file_format").value = 'json';
+      } else if (filename.indexOf(".obj") > -1){
+        document.getElementById("obj_file_format").value = 'mniobj';
+      } else if (filename.indexOf(".asc") > -1){
+        document.getElementById("obj_file_format").value = 'freesurferasc';
+      }
 
       var format = $(this).closest(".file-select").find("option:selected").val();
-
+      
       showLoading();
       viewer.loadModelFromFile(document.getElementById("objfile"), {
         format: format,
         complete: hideLoading
       });
+
+      if (format === "mniobj"){
+        var per_vertex_div = $("<div class=\"per_vertex_class\"><div id=\"per_vertex_file_select\" class=\"file-select\">Per vertex data: <div id=\"per_vertex_data\"><input id=\"datafile\" type =\"file\" name=\"datafile\"></input></div></div>" + 
+          "<div id=\"data-submit\" class=\"file-submit-div\"><span id=\"data_submit_load\" class=\"button file-submit\">Load</span> " +
+          "<span id=\"data_submit_clear\" class=\"button\">Unload All</span></div>" +
+          "</div></div>");
+        per_vertex_div.appendTo("#surface_choice");
+      } else {
+        $( ".per_vertex_class" ).remove();
+      }
+
+      $("#data_submit_load").click(function() {
+
+        //Temporarily hard-coded for .txt files.  Should be opened up to Freesurfer .asc, binary, etc.
+
+//        var format = $(this).closest(".file-select").find("option:selected").val();
+        var format = 'text';
+
+        var file = document.getElementById("datafile");
+
+        //Temporarily hard-coded for spectral.  Should be opened to other color maps, ranges, etc.
+        viewer.loadColorMapFromURL("color-maps/spectral.txt");
+
+        viewer.loadIntensityDataFromFile(file, {
+          min: 0.5,
+          max: 5.5,
+          format: format,
+          blend: true
+        });
+      });
+
+      $("#data_submit_clear").click(function() {
+        viewer.clearScreen();
+        showLoading();
+        viewer.loadModelFromFile(document.getElementById("objfile"), {
+          format: format,
+          complete: hideLoading
+        });
+      });
+
       return false;
     });
-
 
     $("#pick-value").change(function() {
       var index = parseInt($("#pick-index").html(), 10);
@@ -1737,6 +1907,14 @@ $(function() {
           bounding_box_min_z = -grid_length;
           bounding_box_max_z = grid_length;
 	}
+
+        //Round down or up (for mins and maxes) to make sure that all bounding boxes contain an even number of partitions (not a fraction of one)
+        bounding_box_min_x = grid_partitions*Math.floor(bounding_box_min_x/grid_partitions);
+        bounding_box_max_x = grid_partitions*Math.ceil(bounding_box_max_x/grid_partitions);
+        bounding_box_min_y = grid_partitions*Math.floor(bounding_box_min_y/grid_partitions);
+        bounding_box_max_y = grid_partitions*Math.ceil(bounding_box_max_y/grid_partitions);
+        bounding_box_min_z = grid_partitions*Math.floor(bounding_box_min_z/grid_partitions);
+        bounding_box_max_z = grid_partitions*Math.ceil(bounding_box_max_z/grid_partitions);
 
         var gridXZ;
         var gridXY;
