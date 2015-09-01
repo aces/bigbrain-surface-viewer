@@ -96,6 +96,7 @@ $(function() {
     var toggle_grid_XZ = "on";
     var toggle_grid_YZ = "on";
     var opacity_grid_toggle = "on";
+    var classNames = ["wireframe_off", "wireframe_on", "wireframe_mixed"];
 
     // Add the three.js 3D anaglyph effect to the viewer.
     viewer.addEffect("AnaglyphEffect");
@@ -764,10 +765,10 @@ $(function() {
       container.html("");
       for(i = 0, count = data_set.length; i < count; i++) {
         headers += '<li><a href="#data-file' + i + '">' + data_set[i].name + '</a></li>';
-        controls += '<div id="data-file' + i + '" class="box range-controls">';
-        controls += 'Min: <input class="range-box" id="data-range-min" type="text" name="range_min" size="5" >';
-        controls += '<div id="range-slider' + i + '" data-blend-index="' + i + '" class="slider"></div>';
-        controls += 'Max: <input class="range-box" id="data-range-max" type="text" name="range_max" size="5">';
+        controls += '<div id="data-file' + i + '" class="box range-controls"><div style=\"clear: both;\"><p class=\"alignleft\">';
+        controls += 'Min: <input class="range-box" id="data-range-min" type="text" name="range_min" size="3" ></p></div><p class=\"alignright\">';
+        controls += 'Max: <input class="range-box" id="data-range-max" type="text" name="range_max" size="3"></p>';
+        controls += '<div id="range-slider' + i + '" data-blend-index="' + i + '" class="aligncenter slider"></div>';
         controls += '<input type="checkbox" class="button" id="fix_range"' +
                     (viewer.getAttribute("fix_color_range") ? ' checked="true"' : '') +
                     '><label for="fix_range">Fix Range</label>';
@@ -1062,9 +1063,14 @@ $(function() {
       viewer.setView($("[name=hem_view]:checked").val());
     });
     
-    // Toggle wireframe.
-    $("#meshmode").change(function() {
-      viewer.setWireframe($(this).is(":checked"));
+    // Toggle wireframe between off, on, and mixed.
+    $("#meshmode").click(function() {
+      $(this).toggleClass(function (i, className, b) {
+        var index = (classNames.indexOf(className) + 1) % classNames.length;
+        viewer.setWireframe(classNames[index]);
+        $(this).removeClass(className);
+        return classNames[index];
+      });
     });
     
     // Toggle 3D anaglyph effect.
@@ -1172,18 +1178,6 @@ $(function() {
         }
       }
     });
-
-    // Color map URLs are read from the config file and added to the
-    // color map select box.
-    var color_map_select = $('<select id="color-map-select"></select>').change(function() {
-      viewer.loadColorMapFromURL($(this).val());
-    });
-
-    BrainBrowser.config.get("color_maps").forEach(function(color_map) {
-      color_map_select.append('<option value="' + color_map.url + '">' + color_map.name +'</option>');
-    });
-
-    $("#color-map-box").append(color_map_select);
 
     // Remove currently loaded models.
     $("#clearshapes").click(function() {
@@ -1312,43 +1306,110 @@ $(function() {
         complete: hideLoading
       });
 
-      if (format === "mniobj"){
-        var per_vertex_div = $("<div class=\"per_vertex_class\"><div id=\"per_vertex_file_select\" class=\"file-select\">Per vertex data: <div id=\"per_vertex_data\"><input id=\"datafile\" type =\"file\" name=\"datafile\"></input></div></div>" + 
-	  "<div id=\"data-submit\" class=\"file-submit-div\"><span id=\"data_submit_load\" class=\"button file-submit\">Load</span> " +
-          "<span id=\"data_submit_clear\" class=\"button\">Unload All</span></div>" +
-          "</div></div>");
+      if ((format === "mniobj") || (format === "freesurferasc") ){
+        var per_vertex_div = $("<div class=\"per_vertex_class\"><div id=\"per_vertex_file_select\" class=\"file-select\">Per vertex data: <div id=\"browse_per_vertex_data\">" +
+          "<input id=\"datafile\" type =\"file\" name=\"datafile\"></input></div></div>" +
+          "<div id=\"tmp\" class=\"file-select\">Format:  <select id=\"data-file-format\" class=\"file-format\" name=\"format\">" + 
+          "<option value=\"text\">Text</option>" +
+          "<option value=\"freesurferasc\">Freesurfer ASC</option>" +
+          "</select></div>" +
+          "<div id=\"data-submit\" class=\"file-submit-div\"><span id=\"data_submit_load\" class=\"button file-submit\">Load</span> " +
+          "<span id=\"data_submit_clear\" class=\"button\">Unload All</span>" +
+          "</div>");
         per_vertex_div.appendTo("#surface_choice");
+	if (format === "freesurferasc"){
+           document.getElementById("data-file-format").value = 'freesurferasc';
+        }
       } else {
         $( ".per_vertex_class" ).remove();
       }
 
-      $("#data_submit_load").click(function() {
+      $("#browse_per_vertex_data").change(function() {
 
- 	//Temporarily hard-coded for .txt files.  Should be opened up to Freesurfer .asc, binary, etc.
+        // Attempt to automatically detect filetype based on filename extension.
+        var datafilename = document.getElementById("datafile").value;
 
-//        var format = $(this).closest(".file-select").find("option:selected").val();
-        var format = 'text';
+        if (datafilename.indexOf(".txt") > -1){
+          document.getElementById("data-file-format").value = 'text';
+        } else if (datafilename.indexOf(".asc") > -1){
+          document.getElementById("data-file-format").value = 'freesurferasc';
+        }
 
+        var format = $(this).closest(".file-select").find("option:selected").val();
         var file = document.getElementById("datafile");
 
-	//Temporarily hard-coded for spectral.  Should be opened to other color maps, ranges, etc.
+        //Color map
+
+        var data_range_div = $("<div class=\"data-range-class\"><div id=\"data-range-box\"><br><div id=\"data-range\"></div><div id=\"blend-box\"></div></div></div>");
+
+        data_range_div.appendTo("#data-submit");
+
+        var color_div = $("<div id=\"color_map_file_select\" class=\"file-select\">Color map: <select id=\"color-map-select\">" +
+          "<option value=\"color-maps/spectral.txt\">Spectral</option>" +
+          "<option value=\"color-maps/thermal.txt\">Thermal</option>" +
+          "<option value=\"color-maps/gray-scale.txt\">Gray</option>" +
+          "<option value=\"color-maps/blue.txt\">Blue</option>" +
+          "<option value=\"color-maps/green.txt\">Green</option>" +
+          "</select></div>");
+
+        color_div.appendTo("#data-range-box");
+
+        //Default: spectral.
         viewer.loadColorMapFromURL("color-maps/spectral.txt");
 
+        $("#color-map-select").change(function() {
+          viewer.loadColorMapFromURL($(this).val());
+        });
+
         viewer.loadIntensityDataFromFile(file, {
-          min: 0.5,
-          max: 5.5,
+          format: format,
+          blend: true
+        });
+
+      });
+
+      $("#data_submit_load").click(function() {
+
+        var format = $(this).closest(".file-select").find("option:selected").val();
+        var file = document.getElementById("datafile");
+
+        //Color map
+
+        var data_range_div = $("<div class=\"data-range-class\"><div id=\"data-range-box\"><br><div id=\"data-range\"></div><div id=\"blend-box\"></div></div></div>");
+
+        data_range_div.appendTo("#data-submit");
+
+        var color_div = $("<div id=\"color_map_file_select\" class=\"file-select\">Color map: <select id=\"color-map-select\">" +
+          "<option value=\"color-maps/spectral.txt\">Spectral</option>" +
+          "<option value=\"color-maps/thermal.txt\">Thermal</option>" +
+          "<option value=\"color-maps/gray-scale.txt\">Gray</option>" +
+          "<option value=\"color-maps/blue.txt\">Blue</option>" +
+          "<option value=\"color-maps/green.txt\">Green</option>" +
+          "</select></div>");
+
+        color_div.appendTo("#data-range-box");
+
+	//Default: spectral.
+        viewer.loadColorMapFromURL("color-maps/spectral.txt");
+
+        $("#color-map-select").change(function() {
+          viewer.loadColorMapFromURL($(this).val());
+        });
+
+        viewer.loadIntensityDataFromFile(file, {
           format: format,
           blend: true
         });
       });
 
       $("#data_submit_clear").click(function() {
-        viewer.clearScreen();
+        viewer.clearScreen2();
         showLoading();
         viewer.loadModelFromFile(document.getElementById("objfile"), {
           format: format,
           complete: hideLoading
         });
+        $(".data-range-class").remove();
       });
 
       return false;
@@ -1379,47 +1440,86 @@ $(function() {
         complete: hideLoading
       });
 
-      if (format === "mniobj"){
-        var per_vertex_div = $("<div class=\"per_vertex_class\"><div id=\"per_vertex_file_select\" class=\"file-select\">Per vertex data: <div id=\"per_vertex_data\"><input id=\"datafile\" type =\"file\" name=\"datafile\"></input></div></div>" + 
+      if ((format === "mniobj") || (format === "freesurferasc")){
+        var per_vertex_div = $("<div class=\"per_vertex_class\"><div id=\"per_vertex_file_select\" class=\"file-select\">Per vertex data: <div id=\"browse_per_vertex_data\">" +
+          "<input id=\"datafile\" type =\"file\" name=\"datafile\"></input></div></div>" +
+          "<div id=\"tmp\" class=\"file-select\">Format:  <select id=\"data-file-format\" class=\"file-format\" name=\"format\">" +
+          "<option value=\"text\">Text</option>" +
+          "<option value=\"freesurferasc\">Freesurfer ASC</option>" +
+          "</select></div>" +
           "<div id=\"data-submit\" class=\"file-submit-div\"><span id=\"data_submit_load\" class=\"button file-submit\">Load</span> " +
-          "<span id=\"data_submit_clear\" class=\"button\">Unload All</span></div>" +
-          "</div></div>");
+          "<span id=\"data_submit_clear\" class=\"button\">Unload All</span>" +
+          "</div>");
+
         per_vertex_div.appendTo("#surface_choice");
+        if (format === "freesurferasc"){
+           document.getElementById("data-file-format").value = 'freesurferasc';
+        }
       } else {
         $( ".per_vertex_class" ).remove();
       }
 
+      $("#browse_per_vertex_data").change(function() {
+
+        // Attempt to automatically detect filetype based on filename extension.  May be incorrect for Wavefront OBJ, but we use MNI OBJ more often.
+        var datafilename = document.getElementById("datafile").value;
+
+        if (datafilename.indexOf(".txt") > -1){
+          document.getElementById("data-file-format").value = 'text';
+        } else if (datafilename.indexOf(".asc") > -1){
+          document.getElementById("data-file-format").value = 'freesurferasc';
+        }
+
+      });
+
       $("#data_submit_load").click(function() {
 
-        //Temporarily hard-coded for .txt files.  Should be opened up to Freesurfer .asc, binary, etc.
-
-//        var format = $(this).closest(".file-select").find("option:selected").val();
-        var format = 'text';
-
+        var format = $(this).closest(".file-select").find("option:selected").val();
         var file = document.getElementById("datafile");
 
-        //Temporarily hard-coded for spectral.  Should be opened to other color maps, ranges, etc.
+        //Color map
+
+        var data_range_div = $("<div class=\"data-range-class\"><div id=\"data-range-box\"><br><div id=\"data-range\"></div><div id=\"blend-box\"></div></div></div>");
+
+        data_range_div.appendTo("#data-submit");
+
+        var color_div = $("<div id=\"color_map_file_select\" class=\"file-select\">Color map: <select id=\"color-map-select\">" +
+          "<option value=\"color-maps/spectral.txt\">Spectral</option>" +
+          "<option value=\"color-maps/thermal.txt\">Thermal</option>" +
+          "<option value=\"color-maps/gray-scale.txt\">Gray</option>" +
+          "<option value=\"color-maps/blue.txt\">Blue</option>" +
+          "<option value=\"color-maps/green.txt\">Green</option>" +
+          "</select></div>");
+
+        color_div.appendTo("#data-range-box");
+
+        //Default: spectral.
         viewer.loadColorMapFromURL("color-maps/spectral.txt");
 
+        $("#color-map-select").change(function() {
+          viewer.loadColorMapFromURL($(this).val());
+        });
+
         viewer.loadIntensityDataFromFile(file, {
-          min: 0.5,
-          max: 5.5,
           format: format,
           blend: true
         });
       });
 
       $("#data_submit_clear").click(function() {
-        viewer.clearScreen();
+        viewer.clearScreen2();
         showLoading();
         viewer.loadModelFromFile(document.getElementById("objfile"), {
           format: format,
           complete: hideLoading
         });
+        $(".data-range-class").remove();
       });
 
       return false;
     });
+
+
 
     $("#pick-value").change(function() {
       var index = parseInt($("#pick-index").html(), 10);

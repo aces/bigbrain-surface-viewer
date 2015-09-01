@@ -142,7 +142,7 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
   * });
   * ```
   */
-  viewer.setWireframe = function(is_wireframe, options, model_name) {
+  viewer.setWireframe = function(wireframe_mode, options, model_name) {
 
     options = options || {};
 
@@ -157,23 +157,18 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
     }
 
     shapes.forEach(function(shape, j) {
-
       wireframe = shape.getObjectByName("__WIREFRAME__");
 
-      var i = shape.name;
-      i =  Math.abs(i.substr(i.length-2, i.length-1));
-      if ($("#individualtoggleopacity-" + i).html() == "On"){
-        if (wireframe) {
-          toggleWireframe(shape, wireframe, is_wireframe);
-        } else if (shape.userData.has_wireframe && !shape.userData.creating_wireframe) {
-
-          var model_data = viewer.model_data.get(model_name);
-          shape.color = model_data.shapes[j].color;
-
-          createWireframe(shape, function(wireframe) {
-            toggleWireframe(shape, wireframe, is_wireframe);
-          });
-        }
+      if (wireframe) {
+        toggleWireframe(shape, wireframe, wireframe_mode);
+      } else if (shape.userData.has_wireframe && !shape.userData.creating_wireframe) {
+//	if (shape.color){
+//          var model_data = viewer.model_data.get(model_name);
+//          shape.color = model_data.shapes[j].color;
+//	}
+        createWireframe(shape, function(wireframe) {
+          toggleWireframe(shape, wireframe, wireframe_mode);
+        });
       }
     });
   };
@@ -281,14 +276,16 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
       material = new THREE.LineBasicMaterial({ vertexColors: THREE.VertexColors });
       wireframe = new THREE.Line(wire_geometry, material, THREE.LinePieces);
 
-      var r = shape.color[0];
-      var g = shape.color[1];
-      var b = shape.color[2];
+//      if (shape.color){
+//        var r = shape.color[0];
+//        var g = shape.color[1];
+//        var b = shape.color[2];
 
-      //Swapping rgb values so that wireframe mesh shows over surface (otherwise would be the same color)
-      wireframe.material.color.r = g;
-      wireframe.material.color.g = b;
-      wireframe.material.color.b = r;
+//        //Swapping rgb values so that wireframe mesh shows over surface (otherwise would be the same color)
+//        wireframe.material.color.r = g;
+//        wireframe.material.color.g = b;
+//        wireframe.material.color.b = r;
+//      }
 
       wireframe.name = "__WIREFRAME__";
       wireframe.material.visible = false;
@@ -316,9 +313,21 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
     active_wireframe_jobs++;
   }
 
-  function toggleWireframe(shape, wireframe, is_wireframe) {
-//    shape.material.visible = !is_wireframe;
-    wireframe.material.visible = is_wireframe;
+  function toggleWireframe(shape, wireframe, wireframe_mode) {
+
+    var i = shape.name;
+    i =  Math.abs(i.substr(i.length-2, i.length-1));
+
+    if (wireframe_mode === "wireframe_off"){
+      shape.material.visible = true;
+      wireframe.material.visible = false;
+    } else if (wireframe_mode === "wireframe_on"){
+      shape.material.visible = false;
+      wireframe.material.visible = true;
+    } else if (wireframe_mode === "wireframe_mixed"){
+      shape.material.visible = true;
+      wireframe.material.visible = true;
+    }
 
     var wf = shape.getObjectByName("__WIREFRAME__");
     var alpha = $(".opacity-slider[data-shape-name='" + shape.name + "']").slider("value")/100;
@@ -327,6 +336,10 @@ BrainBrowser.SurfaceViewer.modules.views = function(viewer) {
     if (alpha < 1){
       wf.material.transparent = true;
     }
+    if ($("#individualtoggleopacity-" + i).html() == "Off"){
+      viewer.setTransparency(0, {shape_name: viewer.model.children[i].name});
+    }
+
     viewer.updated = true;
   }
 };

@@ -77,6 +77,74 @@ input[type=checkbox].icon:checked + label:active {
   background-color: #1E8FFF;
 }
 
+.wireframe_off {
+  display: none;
+}
+
+.wireframe_off + label {
+  display: inline-block;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 0.3em 0.3em;
+  background-color: #1E8FFF;
+  color: #F0F0F0;
+}
+
+.wireframe_off + label:hover {
+  background-color: #5ECFFF;
+}
+
+.wireframe_off + label:active {
+  background-color: #1E8FFF;
+}
+
+.wireframe_on {
+  display: none;
+}
+  
+.wireframe_on + label {
+  display: inline-block;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 0.3em 0.3em;
+  background-color: red;
+  color: #F0F0F0;
+}
+
+.wireframe_on + label:hover {
+  background-color: #5ECFFF;
+}
+
+.wireframe_on + label:active {
+  background-color: red;
+}
+
+.wireframe_mixed {
+  display: none;
+}
+  
+.wireframe_mixed + label {
+  display: inline-block;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 0.3em 0.3em;
+  background-color: green;
+  color: #F0F0F0;
+}
+
+.wireframe_mixed + label:hover {
+  background-color: #5ECFFF;
+}
+
+.wireframe_mixed + label:active {
+  background-color: green;
+}
+
+
+
 .button:hover {
   background-color: #3EAFFF;
 }
