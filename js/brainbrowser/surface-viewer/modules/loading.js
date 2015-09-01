@@ -358,6 +358,20 @@ BrainBrowser.SurfaceViewer.modules.loading = function(viewer) {
   };
 
 
+  viewer.clearScreen2 = function() {
+    var children = viewer.model.children;
+
+    while (children.length > 0) {
+      viewer.model.remove(children[0]);
+    }
+
+    viewer.model_data.clear();
+
+//    viewer.resetView();
+//    viewer.triggerEvent("clearscreen");
+  };
+
+
   ////////////////////////////////////
   // PRIVATE FUNCTIONS
   ////////////////////////////////////
