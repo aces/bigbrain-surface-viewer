@@ -95,8 +95,14 @@ $(function() {
     var toggle_grid_XY = "on";
     var toggle_grid_XZ = "on";
     var toggle_grid_YZ = "on";
-    var opacity_grid_toggle = "on";
     var classNames = ["wireframe_off", "wireframe_on", "wireframe_mixed"];
+    var grid_auto_toggle = "on";
+    var bounding_box_min_x = [];
+    var bounding_box_max_x = [];
+    var bounding_box_min_y = [];
+    var bounding_box_max_y = [];
+    var bounding_box_min_z = [];
+    var bounding_box_max_z = [];
 
     // Add the three.js 3D anaglyph effect to the viewer.
     viewer.addEffect("AnaglyphEffect");
@@ -223,37 +229,37 @@ $(function() {
                 shape_name: shape_name
               });
               if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
-		if ((opacity_grid_toggle === "on") && (alpha < 0.25 )){
-                  slider_backup[viewer.model.children[j].name] = alpha * 100;
-                  $( ".axes_class" ).remove();
-                  $( ".axes_legend_class" ).remove();
-                  $( ".grid_class" ).remove();
-                  clearShape("axes");
-                  clearShape("grid");
-                  window.axesbox = undefined;
-                  if (picked_coords !== undefined){
-                    var axes = buildAxes( axes_length, picked_coords.x, picked_coords.y, picked_coords.z, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
-                  } else {
-                    var axes = buildAxes( axes_length, 0, 0, 0, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
-                  }
-		  opacity_grid_toggle = "off";
-                } else if ((opacity_grid_toggle === "off") && (alpha >= 0.25 )){
-                  slider_backup[viewer.model.children[j].name] = alpha * 100;
-                  $( ".axes_class" ).remove();
-                  $( ".axes_legend_class" ).remove();
-                  $( ".grid_class" ).remove();
-                  clearShape("axes");
-                  clearShape("grid");
-                  window.axesbox = undefined;
-                  if (picked_coords !== undefined){
-                    var axes = buildAxes( axes_length, picked_coords.x, picked_coords.y, picked_coords.z, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
-                  } else {
-                    var axes = buildAxes( axes_length, 0, 0, 0, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
-                  }
-                  opacity_grid_toggle = "on";
-		}
+                slider_backup[viewer.model.children[j].name] = alpha * 100;
+                if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == true)){
+                  toggle_grid_XY = "off";
+                } else if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == false)){
+                  toggle_grid_XY = "on";
+                }
+                if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == true)){
+                  toggle_grid_YZ = "off";
+                } else if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == false)){
+                  toggle_grid_YZ = "on";
+                }
+                if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == true)){
+                  toggle_grid_XZ = "off";
+                } else if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == false)){
+                  toggle_grid_XZ = "on";
+                }
+                if ((document.getElementById("grid_auto_toggle")) && ($("#grid_auto_toggle").html() == "Off")){
+                  grid_auto_toggle = "off";
+                }
+                $( ".axes_class" ).remove();
+                $( ".axes_legend_class" ).remove();
+                $( ".grid_class" ).remove();
+                clearShape("axes");
+                clearShape("grid");
+                window.axesbox = undefined;
+                if (picked_coords !== undefined){
+                  var axes = buildAxes( axes_length, picked_coords.x, picked_coords.y, picked_coords.z, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+                } else {
+                  var axes = buildAxes( axes_length, 0, 0, 0, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+                }
 	      }
-
 
               if ((marker !== "") && (shape_name == picked_object.name)){
                 viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
@@ -282,6 +288,24 @@ $(function() {
               document.getElementById("individualtoggleopacity-" + j).style.backgroundColor = "red";
               document.getElementById("opacity-slider-" + j).style.visibility = "hidden";
               if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+                if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == true)){
+                  toggle_grid_XY = "off";
+                } else if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == false)){
+                  toggle_grid_XY = "on";
+                }
+                if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == true)){
+                  toggle_grid_YZ = "off";
+                } else if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == false)){
+                  toggle_grid_YZ = "on";
+                }
+                if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == true)){
+                  toggle_grid_XZ = "off";
+                } else if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == false)){
+                  toggle_grid_XZ = "on";
+                }
+                if ((document.getElementById("grid_auto_toggle")) && ($("#grid_auto_toggle").html() == "Off")){
+                  grid_auto_toggle = "off";
+                }
                 $( ".axes_class" ).remove();
                 $( ".axes_legend_class" ).remove();
                 $( ".grid_class" ).remove();
@@ -293,7 +317,6 @@ $(function() {
                 } else {
                   var axes = buildAxes( axes_length, 0, 0, 0, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
                 }
-                opacity_grid_toggle = "off";
 	      }
 	    } else {
               var alpha = slider_backup[shape.name + "-" + j] / 100;
@@ -308,6 +331,24 @@ $(function() {
 	        viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
               }
               if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+                if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == true)){
+                  toggle_grid_XY = "off";
+                } else if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == false)){
+                  toggle_grid_XY = "on";
+                }
+                if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == true)){
+                  toggle_grid_YZ = "off";
+                } else if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == false)){
+                  toggle_grid_YZ = "on";
+                }
+                if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == true)){
+                  toggle_grid_XZ = "off";
+                } else if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == false)){
+                  toggle_grid_XZ = "on";
+                }
+                if ((document.getElementById("grid_auto_toggle")) && ($("#grid_auto_toggle").html() == "Off")){
+                  grid_auto_toggle = "off";
+                }
                 $( ".axes_class" ).remove();
                 $( ".axes_legend_class" ).remove();
                 $( ".grid_class" ).remove();
@@ -319,7 +360,6 @@ $(function() {
                 } else {
                   var axes = buildAxes( axes_length, 0, 0, 0, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
                 }
-                opacity_grid_toggle = "on";
               }
 	    }
           });
@@ -506,6 +546,24 @@ $(function() {
             }
 
             if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+              if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == true)){
+                toggle_grid_XY = "off";
+              } else if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == false)){
+                toggle_grid_XY = "on";
+              }
+              if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == true)){
+                toggle_grid_YZ = "off";
+              } else if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == false)){
+                toggle_grid_YZ = "on";
+              }
+              if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == true)){
+                toggle_grid_XZ = "off";
+              } else if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == false)){
+                toggle_grid_XZ = "on";
+              }
+              if ((document.getElementById("grid_auto_toggle")) && ($("#grid_auto_toggle").html() == "Off")){
+                grid_auto_toggle = "off";
+              }
               $( ".axes_class" ).remove();
               $( ".axes_legend_class" ).remove();
               $( ".grid_class" ).remove();
@@ -575,6 +633,24 @@ $(function() {
             marker.name = "marker";
             viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
             if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+              if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == true)){
+                toggle_grid_XY = "off";
+              } else if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == false)){
+                toggle_grid_XY = "on";
+              }
+              if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == true)){
+                toggle_grid_YZ = "off";
+              } else if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == false)){
+                toggle_grid_YZ = "on";
+              }
+              if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == true)){
+                toggle_grid_XZ = "off";
+              } else if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == false)){
+                toggle_grid_XZ = "on";
+              }
+              if ((document.getElementById("grid_auto_toggle")) && ($("#grid_auto_toggle").html() == "Off")){
+                grid_auto_toggle = "off";
+              }
               $( ".axes_class" ).remove();
               $( ".axes_legend_class" ).remove();
               $( ".grid_class" ).remove();
@@ -649,6 +725,24 @@ $(function() {
           }
 
           if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+            if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == true)){
+              toggle_grid_XY = "off";
+            } else if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == false)){
+              toggle_grid_XY = "on";
+            }
+            if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == true)){
+              toggle_grid_YZ = "off";
+            } else if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == false)){
+              toggle_grid_YZ = "on";
+            }
+            if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == true)){
+              toggle_grid_XZ = "off";
+            } else if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == false)){
+              toggle_grid_XZ = "on";
+            }
+            if ((document.getElementById("grid_auto_toggle")) && ($("#grid_auto_toggle").html() == "Off")){
+              grid_auto_toggle = "off";
+            }
             $( ".axes_class" ).remove();
             $( ".axes_legend_class" ).remove();
             $( ".grid_class" ).remove();
@@ -682,6 +776,24 @@ $(function() {
           }
 
           if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+            if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == true)){
+              toggle_grid_XY = "off";
+            } else if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == false)){
+              toggle_grid_XY = "on";
+            }
+            if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == true)){
+              toggle_grid_YZ = "off";
+            } else if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == false)){
+              toggle_grid_YZ = "on";
+            }
+            if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == true)){
+              toggle_grid_XZ = "off";
+            } else if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == false)){
+              toggle_grid_XZ = "on";
+            }
+            if ((document.getElementById("grid_auto_toggle")) && ($("#grid_auto_toggle").html() == "Off")){
+              grid_auto_toggle = "off";
+            }
             $( ".axes_class" ).remove();
             $( ".axes_legend_class" ).remove();
             $( ".grid_class" ).remove();
@@ -947,6 +1059,24 @@ $(function() {
       viewer.setClearColor(bgcolor);
 
       if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){ 
+        if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == true)){
+          toggle_grid_XY = "off";
+        } else if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == false)){
+          toggle_grid_XY = "on";
+        }
+        if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == true)){
+          toggle_grid_YZ = "off";
+        } else if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == false)){
+          toggle_grid_YZ = "on";
+        }
+        if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == true)){
+          toggle_grid_XZ = "off";
+        } else if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == false)){
+          toggle_grid_XZ = "on";
+        }
+        if ((document.getElementById("grid_auto_toggle")) && ($("#grid_auto_toggle").html() == "Off")){
+          grid_auto_toggle = "off";
+        }
         $( ".axes_class" ).remove();
         $( ".axes_legend_class" ).remove();
         $( ".grid_class" ).remove();
@@ -986,6 +1116,24 @@ $(function() {
       window.location.hash = "#surface_choice";
 
       if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+        if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == true)){
+          toggle_grid_XY = "off";
+        } else if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == false)){
+          toggle_grid_XY = "on";
+        }
+        if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == true)){
+          toggle_grid_YZ = "off";
+        } else if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == false)){
+          toggle_grid_YZ = "on";
+        }
+        if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == true)){
+          toggle_grid_XZ = "off";
+        } else if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == false)){
+          toggle_grid_XZ = "on";
+        }
+        if ((document.getElementById("grid_auto_toggle")) && ($("#grid_auto_toggle").html() == "Off")){
+          grid_auto_toggle = "off";
+        }
         $( ".axes_class" ).remove();
         $( ".axes_legend_class" ).remove();
         $( ".grid_class" ).remove();
@@ -1164,6 +1312,24 @@ $(function() {
         }
         axes_toggle = "on";
       } else {
+        if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == true)){
+          toggle_grid_XY = "off";
+        } else if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == false)){
+          toggle_grid_XY = "on";
+        }
+        if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == true)){
+          toggle_grid_YZ = "off";
+        } else if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == false)){
+          toggle_grid_YZ = "on";
+        }
+        if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == true)){
+          toggle_grid_XZ = "off";
+        } else if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == false)){
+          toggle_grid_XZ = "on";
+        }
+        if ((document.getElementById("grid_auto_toggle")) && ($("#grid_auto_toggle").html() == "Off")){
+          grid_auto_toggle = "off";
+        }
         $( ".axes_class" ).remove();
         $( ".axes_legend_class" ).remove();
         $( ".grid_class" ).remove();
@@ -1262,6 +1428,24 @@ $(function() {
           viewer.setTransparency(picked_object.material.opacity, {shape_name: "marker"});
           focus_toggle = "off";
           if ((window.axesbox !== undefined) && (axesbox.model.name === "axes_on")){
+            if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == true)){
+              toggle_grid_XY = "off";
+            } else if ((document.getElementById("toggle_grid_XY")) && (document.getElementById("toggle_grid_XY").checked == false)){
+              toggle_grid_XY = "on";
+            }
+            if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == true)){
+              toggle_grid_YZ = "off";
+            } else if ((document.getElementById("toggle_grid_YZ")) && (document.getElementById("toggle_grid_YZ").checked == false)){
+              toggle_grid_YZ = "on";
+            }
+            if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == true)){
+              toggle_grid_XZ = "off";
+            } else if ((document.getElementById("toggle_grid_XZ")) && (document.getElementById("toggle_grid_XZ").checked == false)){
+              toggle_grid_XZ = "on";
+            }
+            if ((document.getElementById("grid_auto_toggle")) && ($("#grid_auto_toggle").html() == "Off")){
+              grid_auto_toggle = "off";
+            }
             $( ".axes_class" ).remove();
             $( ".axes_legend_class" ).remove();
             $( ".grid_class" ).remove();
@@ -1840,14 +2024,42 @@ $(function() {
                        " units</p><div style=\"clear: both;\"></div></div></div>");
 
       var grid_length_div = $("<br><div id=\"grid_length\"><p class=\"alignleft\">Grid length: <span title=\"Type in value to change default of 100\">" +
-                       "<input id=\"grid_length2\" type=\"text\" value=\"" + grid_length + "\" style=\"width: 70px;\"></span>" +
+                       "<input id=\"grid_length_user_input\" type=\"text\" value=\"" + grid_length + "\" style=\"width: 70px;\"></span>" +
                        " units</p><div style=\"clear: both;\"></div>" +
-                       "<br>Grid toggle: <span id=\"autorotate-controls\" class=\"buttonset\"><input type=\"checkbox\" id=\"toggle_grid_YZ\" class=\"icon\"><label for=\"toggle_grid_YZ\">X</label>" +
+                       "<br>Grid plane toggle: <span id=\"autorotate-controls\" class=\"buttonset\"><input type=\"checkbox\" id=\"toggle_grid_YZ\" class=\"icon\"><label for=\"toggle_grid_YZ\">X</label>" +
                        "<span id=\"autorotate-controls\" class=\"buttonset\"> <input type=\"checkbox\" id=\"toggle_grid_XZ\" class=\"icon\"><label for=\"toggle_grid_XZ\">Y</label>" +
-                       "<span id=\"autorotate-controls\" class=\"buttonset\"> <input type=\"checkbox\" id=\"toggle_grid_XY\" class=\"icon\"><label for=\"toggle_grid_XY\">Z</label></span></div>");
+                       "<span id=\"autorotate-controls\" class=\"buttonset\"> <input type=\"checkbox\" id=\"toggle_grid_XY\" class=\"icon\"><label for=\"toggle_grid_XY\">Z</label></span>" + 
+                       "<br><br>Grid auto-resize toggle: <a id=\"grid_auto_toggle\" class=\"on-off-button\">On</a></div>");
 
       grid_div.appendTo("#vertex-data-wrapper");
       grid_length_div.appendTo("#grid");
+
+      if (toggle_grid_XY == "off"){
+        document.getElementById("toggle_grid_XY").checked = true;
+      }
+      if (toggle_grid_YZ == "off"){
+        document.getElementById("toggle_grid_YZ").checked = true;
+      }
+      if (toggle_grid_XZ == "off"){
+        document.getElementById("toggle_grid_XZ").checked = true;
+      }
+
+      if (grid_auto_toggle == "off"){
+        document.getElementById("grid_auto_toggle").style.backgroundColor = "red";
+        $("#grid_auto_toggle").html("Off");
+      }
+
+      $("#grid_auto_toggle").click(function() {
+        if ($(this).html() == "On"){
+          document.getElementById("grid_auto_toggle").style.backgroundColor = "red";
+          $(this).html("Off");
+          grid_auto_toggle = "off";
+        } else if ($(this).html() == "Off"){
+          document.getElementById("grid_auto_toggle").style.backgroundColor = "green";
+          $(this).html("On");
+          grid_auto_toggle = "on";
+        }
+      });
 
       document.getElementById("grid").style.color = font_color;
       document.getElementById("grid_length").style.color = font_color;
@@ -1858,18 +2070,18 @@ $(function() {
           if (document.getElementById("grid_partitions").value !== ""){
             grid_partitions = parseInt(document.getElementById("grid_partitions").value);
             clearShape("grid");
-            buildGrid(user_defined_grid_partitions, user_defined_grid_length, grid_partitions, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+            buildGrid(user_defined_grid_partitions, user_defined_grid_length);
           }
         }
       });
 
-      $("#grid_length2").keyup(function(event){
+      $("#grid_length_user_input").keyup(function(event){
         if(event.keyCode == 13){  //if enter key is pressed
           user_defined_grid_length = "yes";
-          if (document.getElementById("grid_length2").value !== ""){
-            grid_length = parseInt(document.getElementById("grid_length2").value);
+          if (document.getElementById("grid_length_user_input").value !== ""){
+            grid_length = parseInt(document.getElementById("grid_length_user_input").value);
             clearShape("grid");
-            buildGrid(user_defined_grid_partitions, user_defined_grid_length, grid_partitions, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+            buildGrid(user_defined_grid_partitions, user_defined_grid_length);
           }
         }
       });
@@ -1881,7 +2093,7 @@ $(function() {
           toggle_grid_XY = "on";
         }
         clearShape("grid");
-        buildGrid(user_defined_grid_partitions, user_defined_grid_length, grid_partitions, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+        buildGrid(user_defined_grid_partitions, user_defined_grid_length);
       });
 
       $("#toggle_grid_XZ").click(function() {
@@ -1891,7 +2103,7 @@ $(function() {
           toggle_grid_XZ = "on";
         }
         clearShape("grid");
-        buildGrid(user_defined_grid_partitions, user_defined_grid_length, grid_partitions, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+        buildGrid(user_defined_grid_partitions, user_defined_grid_length);
       });
 
       $("#toggle_grid_YZ").click(function() {
@@ -1901,52 +2113,32 @@ $(function() {
           toggle_grid_YZ = "on";
         }
         clearShape("grid");
-        buildGrid(user_defined_grid_partitions, user_defined_grid_length, grid_partitions, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+        buildGrid(user_defined_grid_partitions, user_defined_grid_length);
       });
 
-      buildGrid(user_defined_grid_partitions, user_defined_grid_length, grid_partitions, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ );
+      buildGrid(user_defined_grid_partitions, user_defined_grid_length);
 
-      function buildGrid(user_defined_grid_partitions, user_defined_grid_length, grid_partitions, toggle_grid_XY, toggle_grid_XZ, toggle_grid_YZ ) {
+      function buildGrid(user_defined_grid_partitions, user_defined_grid_length){
+        if (grid_auto_toggle == "on") {
+          bounding_box_min_x = [];
+          bounding_box_max_x = [];
+          bounding_box_min_y = [];
+          bounding_box_max_y = [];
+          bounding_box_min_z = [];
+          bounding_box_max_z = [];
 
-        var bounding_box_min_x = [];
-        var bounding_box_max_x = [];
-        var bounding_box_min_y = [];
-        var bounding_box_max_y = [];
-        var bounding_box_min_z = [];
-        var bounding_box_max_z = [];
-        var j=0;
+          var j=0;
 
-        if ((viewer.model.children.length !== 0) && (user_defined_grid_length === "no")){
-          for (var i = 0; i < m1_model_data_get.shapes.length; i++) {
-            if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
-              if ((slider_backup[viewer.model.children[i].name] > 25) && (document.getElementById("opacity-slider-" + i).style.visibility !== "hidden")){ //Include this shape for computing bounding box of visible shapes if opacity >25% and if not turned off
-                bounding_box_min_x[i] = m1_model_data_get.shapes[i].bounding_box.min_x;
-                bounding_box_max_x[i] = m1_model_data_get.shapes[i].bounding_box.max_x;
-                bounding_box_min_y[i] = m1_model_data_get.shapes[i].bounding_box.min_y;
-                bounding_box_max_y[i] = m1_model_data_get.shapes[i].bounding_box.max_y;
-                bounding_box_min_z[i] = m1_model_data_get.shapes[i].bounding_box.min_z;
-                bounding_box_max_z[i] = m1_model_data_get.shapes[i].bounding_box.max_z;
-              } else {  // Or else set to fake values so extreme in the wrong direction that they won't influence max / mins (this is a hack because using null returned 0)
-                bounding_box_min_x[i] = 1000000;
-                bounding_box_max_x[i] = -1000000;
-                bounding_box_min_y[i] = 1000000;
-                bounding_box_max_y[i] = -1000000;
-                bounding_box_min_z[i] = 1000000;
-                bounding_box_max_z[i] = -1000000;
-              }
-            }
-          }
-
-          if ( m > 1 ) {
-            for (var i = m1_model_data_get.shapes.length; i < (m1_model_data_get.shapes.length + m2_model_data_get.shapes.length); i++) {
+          if ((viewer.model.children.length !== 0) && (user_defined_grid_length === "no")){
+            for (var i = 0; i < m1_model_data_get.shapes.length; i++) {
               if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
                 if ((slider_backup[viewer.model.children[i].name] > 25) && (document.getElementById("opacity-slider-" + i).style.visibility !== "hidden")){ //Include this shape for computing bounding box of visible shapes if opacity >25% and if not turned off
-                  bounding_box_min_x[i] = m2_model_data_get.shapes[j].bounding_box.min_x;
-                  bounding_box_max_x[i] = m2_model_data_get.shapes[j].bounding_box.max_x;
-                  bounding_box_min_y[i] = m2_model_data_get.shapes[j].bounding_box.min_y;
-                  bounding_box_max_y[i] = m2_model_data_get.shapes[j].bounding_box.max_y;
-                  bounding_box_min_z[i] = m2_model_data_get.shapes[j].bounding_box.min_z;
-                  bounding_box_max_z[i] = m2_model_data_get.shapes[j].bounding_box.max_z;
+                  bounding_box_min_x[i] = m1_model_data_get.shapes[i].bounding_box.min_x;
+                  bounding_box_max_x[i] = m1_model_data_get.shapes[i].bounding_box.max_x;
+                  bounding_box_min_y[i] = m1_model_data_get.shapes[i].bounding_box.min_y;
+                  bounding_box_max_y[i] = m1_model_data_get.shapes[i].bounding_box.max_y;
+                  bounding_box_min_z[i] = m1_model_data_get.shapes[i].bounding_box.min_z;
+                  bounding_box_max_z[i] = m1_model_data_get.shapes[i].bounding_box.max_z;
                 } else {  // Or else set to fake values so extreme in the wrong direction that they won't influence max / mins (this is a hack because using null returned 0)
                   bounding_box_min_x[i] = 1000000;
                   bounding_box_max_x[i] = -1000000;
@@ -1956,65 +2148,87 @@ $(function() {
                   bounding_box_max_z[i] = -1000000;
                 }
               }
-            j=j+1;
             }
-          }
 
-          bounding_box_min_x = Math.min.apply(null, bounding_box_min_x) - offset_diff_total.x;
-          bounding_box_max_x = Math.max.apply(null, bounding_box_max_x) - offset_diff_total.x;
-          bounding_box_min_y = Math.min.apply(null, bounding_box_min_y) - offset_diff_total.y;
-          bounding_box_max_y = Math.max.apply(null, bounding_box_max_y) - offset_diff_total.y;
-          bounding_box_min_z = Math.min.apply(null, bounding_box_min_z) - offset_diff_total.z;
-          bounding_box_max_z = Math.max.apply(null, bounding_box_max_z) - offset_diff_total.z;
+            if ( m > 1 ) {
+              for (var i = m1_model_data_get.shapes.length; i < (m1_model_data_get.shapes.length + m2_model_data_get.shapes.length); i++) {
+                if ((viewer.model.children[i].name !== "axes") && (viewer.model.children[i].name !== "marker") && (viewer.model.children[i].name !== "grid")){
+                  if ((slider_backup[viewer.model.children[i].name] > 25) && (document.getElementById("opacity-slider-" + i).style.visibility !== "hidden")){ //Include this shape for computing bounding box of visible shapes if opacity >25% and if not turned off
+                    bounding_box_min_x[i] = m2_model_data_get.shapes[j].bounding_box.min_x;
+                    bounding_box_max_x[i] = m2_model_data_get.shapes[j].bounding_box.max_x;
+                    bounding_box_min_y[i] = m2_model_data_get.shapes[j].bounding_box.min_y;
+                    bounding_box_max_y[i] = m2_model_data_get.shapes[j].bounding_box.max_y;
+                    bounding_box_min_z[i] = m2_model_data_get.shapes[j].bounding_box.min_z;
+                    bounding_box_max_z[i] = m2_model_data_get.shapes[j].bounding_box.max_z;
+                  } else {  // Or else set to fake values so extreme in the wrong direction that they won't influence max / mins (this is a hack because using null returned 0)
+                    bounding_box_min_x[i] = 1000000;
+                    bounding_box_max_x[i] = -1000000;
+                    bounding_box_min_y[i] = 1000000;
+                    bounding_box_max_y[i] = -1000000;
+                    bounding_box_min_z[i] = 1000000;
+                    bounding_box_max_z[i] = -1000000;
+                  }
+                }
+              j=j+1;
+              }
+            }
 
-          //USEFUL FOR DEBUGGING BOUNDING BOX
-          //var material = new THREE.LineBasicMaterial({ color: 0x0000ff});
+            bounding_box_min_x = Math.min.apply(null, bounding_box_min_x) - offset_diff_total.x;
+            bounding_box_max_x = Math.max.apply(null, bounding_box_max_x) - offset_diff_total.x;
+            bounding_box_min_y = Math.min.apply(null, bounding_box_min_y) - offset_diff_total.y;
+            bounding_box_max_y = Math.max.apply(null, bounding_box_max_y) - offset_diff_total.y;
+            bounding_box_min_z = Math.min.apply(null, bounding_box_min_z) - offset_diff_total.z;
+            bounding_box_max_z = Math.max.apply(null, bounding_box_max_z) - offset_diff_total.z;
+
+            //USEFUL FOR DEBUGGING BOUNDING BOX
+            //var material = new THREE.LineBasicMaterial({ color: 0x0000ff});
   
-          //var geometry = new THREE.Geometry();
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_max_y, bounding_box_max_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_max_y, bounding_box_max_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_min_y, bounding_box_max_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_min_y, bounding_box_max_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_max_y, bounding_box_max_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_max_y, bounding_box_min_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_max_y, bounding_box_min_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_min_y, bounding_box_min_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_min_y, bounding_box_min_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_max_y, bounding_box_min_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_min_y, bounding_box_min_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_min_y, bounding_box_max_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_max_y, bounding_box_max_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_max_y, bounding_box_max_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_max_y, bounding_box_min_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_min_y, bounding_box_min_z));
-          //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_min_y, bounding_box_max_z));
+            //var geometry = new THREE.Geometry();
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_max_y, bounding_box_max_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_max_y, bounding_box_max_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_min_y, bounding_box_max_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_min_y, bounding_box_max_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_max_y, bounding_box_max_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_max_y, bounding_box_min_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_max_y, bounding_box_min_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_min_y, bounding_box_min_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_min_y, bounding_box_min_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_max_y, bounding_box_min_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_min_y, bounding_box_min_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_min_y, bounding_box_max_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_min_x, bounding_box_max_y, bounding_box_max_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_max_y, bounding_box_max_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_max_y, bounding_box_min_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_min_y, bounding_box_min_z));
+            //geometry.vertices.push(new THREE.Vector3(bounding_box_max_x, bounding_box_min_y, bounding_box_max_z));
   
-          //var line = new THREE.Line(geometry, material);
-          //viewer.model.add( line);
+            //var line = new THREE.Line(geometry, material);
+            //viewer.model.add( line);
 
-	  if (user_defined_grid_partitions === "no"){
-	    //Set grid partitions to (somewhat arbitrary) 1/10th of the average distance between bounding box limits for x,y,z
-	    var bounding_box_length_avg = Math.round(Math.abs(bounding_box_max_x - bounding_box_min_x) + Math.abs(bounding_box_max_y - bounding_box_min_y) + Math.abs(bounding_box_max_z - bounding_box_min_z))/3;
-       	    grid_partitions = Math.round(bounding_box_length_avg/10);
-            document.getElementById("grid_partitions").value = grid_partitions;
-            document.getElementById("grid_length2").value = "";
+    	    if (user_defined_grid_partitions === "no"){
+	      //Set grid partitions to (somewhat arbitrary) 1/10th of the average distance between bounding box limits for x,y,z
+       	      var bounding_box_length_avg = Math.round(Math.abs(bounding_box_max_x - bounding_box_min_x) + Math.abs(bounding_box_max_y - bounding_box_min_y) + Math.abs(bounding_box_max_z - bounding_box_min_z))/3;
+       	      grid_partitions = Math.round(bounding_box_length_avg/10);
+              document.getElementById("grid_partitions").value = grid_partitions;
+              document.getElementById("grid_length_user_input").value = "";
+       	    }
+          } else {
+	    bounding_box_min_x = -grid_length;
+            bounding_box_max_x = grid_length;
+            bounding_box_min_y = -grid_length;
+            bounding_box_max_y = grid_length;
+            bounding_box_min_z = -grid_length;
+            bounding_box_max_z = grid_length;
 	  }
-        } else {
-	  bounding_box_min_x = -grid_length;
-          bounding_box_max_x = grid_length;
-          bounding_box_min_y = -grid_length;
-          bounding_box_max_y = grid_length;
-          bounding_box_min_z = -grid_length;
-          bounding_box_max_z = grid_length;
-	}
 
-        //Round down or up (for mins and maxes) to make sure that all bounding boxes contain an even number of partitions (not a fraction of one)
-        bounding_box_min_x = grid_partitions*Math.floor(bounding_box_min_x/grid_partitions);
-        bounding_box_max_x = grid_partitions*Math.ceil(bounding_box_max_x/grid_partitions);
-        bounding_box_min_y = grid_partitions*Math.floor(bounding_box_min_y/grid_partitions);
-        bounding_box_max_y = grid_partitions*Math.ceil(bounding_box_max_y/grid_partitions);
-        bounding_box_min_z = grid_partitions*Math.floor(bounding_box_min_z/grid_partitions);
-        bounding_box_max_z = grid_partitions*Math.ceil(bounding_box_max_z/grid_partitions);
+          //Round down or up (for mins and maxes) to make sure that all bounding boxes contain an even number of partitions (not a fraction of one)
+          bounding_box_min_x = grid_partitions*Math.floor(bounding_box_min_x/grid_partitions);
+          bounding_box_max_x = grid_partitions*Math.ceil(bounding_box_max_x/grid_partitions);
+          bounding_box_min_y = grid_partitions*Math.floor(bounding_box_min_y/grid_partitions);
+          bounding_box_max_y = grid_partitions*Math.ceil(bounding_box_max_y/grid_partitions);
+          bounding_box_min_z = grid_partitions*Math.floor(bounding_box_min_z/grid_partitions);
+          bounding_box_max_z = grid_partitions*Math.ceil(bounding_box_max_z/grid_partitions);
+        }
 
         var gridXZ;
         var gridXY;
@@ -2068,6 +2282,7 @@ $(function() {
           grid.add(gridYZ);
         }
         viewer.model.add(grid);
+	return [bounding_box_min_x, bounding_box_max_x, bounding_box_min_y, bounding_box_max_y, bounding_box_min_z, bounding_box_max_z, grid_partitions];
       }
 
       function buildAxis( src, dst, colorHex, dashed ) {
